@@ -1,5 +1,7 @@
 import * as THREE from 'three'
 import Experience from './Experience.js'
+import frag2D from './shaders/2D.frag'
+import vert2D from './shaders/2D.vert'
 
 export default class World
 {
@@ -33,18 +35,16 @@ export default class World
         this.scene.add(cube)        
     }
 
-    setup () {
-        const hemi = new THREE.HemisphereLight(0xffffff)
-        this.scene.add(hemi)
+    addRock() {
         const rock = this.resources.items.rock;
         this.scene.add(rock.scene)
-        this.scene.environment = this.resources.items.env
+    }
+
+    addAnimatedCharacter () {
         const perso = this.resources.items.character
         const matcapMat = new THREE.MeshMatcapMaterial({
             matcap: this.resources.items.matcap
         })
-        
-        const normalMat= new THREE.MeshNormalMaterial
         const mesh = perso.scene
         mesh.traverse(o => {
             if(o.isMesh) {
@@ -53,19 +53,39 @@ export default class World
                 o.position.y -= 0.1
             }
         })
-        // console.log(mesh)
-        // this.mesh.children[0].scale(0.5)
         this.mixer = new THREE.AnimationMixer(mesh)
         const animation = perso.animations[0]
-        
         const action = this.mixer.clipAction(animation);
-        action.loop = THREE.LoopRepeat
-        action.enabled = true
-        action.setEffectiveWeight(1)
         action.play()
-        console.log(action.isRunning())
         this.scene.add(mesh)
-        
+    }
+
+    setup2D () {
+        const img = this.resources.items.lennaTexture
+       
+
+        const mat = new THREE.ShaderMaterial({
+            fragmentShader:frag2D, 
+            vertexShader:vert2D, 
+            uniforms: {
+                uImage: {value:img},
+                uTime: {value: this.elapsedTime},
+                uSize: {
+                    value: new THREE.Vector2(window.innerWidth, window.innerHeight)
+                }
+            }
+        })
+        this.plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat)
+        this.scene.add(this.plane)
+
+    }
+
+    setup () {
+        const hemi = new THREE.HemisphereLight(0xffffff)
+        this.scene.add(hemi)
+        this.setup2D()
+        // this.addAnimatedCharacter()
+      
     }
 
     resize()
@@ -79,6 +99,10 @@ export default class World
             this.mixer.update(deltaTime*0.001)
             this.time = window.performance.now()
             // console.log(deltaTime)
+        }
+
+        if(this.plane) {
+            this.plane.material.uniforms.uTime.value = this.elapsedTime;
         }
     }
 
