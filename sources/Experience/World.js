@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import Experience from './Experience.js'
 import frag2D from './shaders/2D.frag'
 import vert2D from './shaders/2D.vert'
+import Time from './Utils/Time.js'
 
 export default class World
 {
@@ -11,7 +12,8 @@ export default class World
         this.config = this.experience.config
         this.scene = this.experience.scene
         this.resources = this.experience.resources
-        this.time = window.performance.now()
+        this.time = new Time()
+        this.mousePos = new THREE.Vector2();
    
         
         this.resources.on('groupEnd', (_group) =>
@@ -61,7 +63,7 @@ export default class World
     }
 
     setup2D () {
-        const img = this.resources.items.lennaTexture
+        const img = this.resources.items.image
        
 
         const mat = new THREE.ShaderMaterial({
@@ -70,6 +72,7 @@ export default class World
             uniforms: {
                 uImage: {value:img},
                 uTime: {value: this.elapsedTime},
+                uMouse: {value: this.mousePos},
                 uSize: {
                     value: new THREE.Vector2(window.innerWidth, window.innerHeight)
                 }
@@ -79,12 +82,21 @@ export default class World
         this.scene.add(this.plane)
 
     }
+    
+    setMousePos() {
+        document.addEventListener('mousemove', e => {
+
+            this.mousePos.x = e.pageX;
+            this.mousePos.y = e.pageY;
+        }) 
+    }
 
     setup () {
         const hemi = new THREE.HemisphereLight(0xffffff)
         this.scene.add(hemi)
         this.setup2D()
         // this.addAnimatedCharacter()
+        this.setMousePos()
       
     }
 
@@ -93,17 +105,16 @@ export default class World
     }
 
     update()
-    {
+    {   
         if(this.mixer) {
-            const deltaTime = window.performance.now() - this.time
-            this.mixer.update(deltaTime*0.001)
-            this.time = window.performance.now()
-            // console.log(deltaTime)
+            this.mixer.update(this.time.deltaTime*0.001)
         }
 
         if(this.plane) {
-            this.plane.material.uniforms.uTime.value = this.elapsedTime;
+            this.plane.material.uniforms.uTime.value = this.time.elapsed*0.001;
+            this.plane.material.uniforms.uMouse.value = this.mousePos;
         }
+
     }
 
     destroy()
