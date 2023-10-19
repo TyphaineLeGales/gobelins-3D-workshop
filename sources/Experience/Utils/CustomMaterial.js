@@ -8,12 +8,7 @@ export default class CustomMaterial extends MeshBasicMaterial {
         })
     }
 
-    onBeforeCompile(shader, renderer) {
-        super.onBeforeCompile();
-        console.log(shader.vertexShader)
-        console.log(shader.fragmentShader)
-        shader.uniforms.uTime = { value:0 }
-
+    addUtils (shader) {
         shader.vertexShader = shader.vertexShader.replace('void main() {', [
             'uniform float uTime;',
             'float clampedSine(float t) {',
@@ -24,15 +19,32 @@ export default class CustomMaterial extends MeshBasicMaterial {
             '}',
             'void main() {',
         ].join('\n'));
+    }
+    
+    applyEffect (shader, effectName) {
+        if(effectName === 'wavy') {
+            shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', [
+                'transformed.x += sin(transformed.y*2.0+uTime)*0.5;',
+                "#include <project_vertex>",
+            ].join('\n'));
+        }
 
-        // shader patching
-        shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', [
-            'transformed.x += sin(transformed.y*2.0+uTime)*0.5;',
-            "#include <project_vertex>",
-        ].join('\n'));
+
+
+    }
+
+    onBeforeCompile(shader, renderer) {
+        super.onBeforeCompile();
+        console.log(shader.vertexShader)
+        console.log(shader.fragmentShader)
+        shader.uniforms.uTime = { value:0 }
+
+        this.addUtils(shader)
+        this.applyEffect(shader, 'wavy')
 
         this.userData.shader = shader
     }
+
 
     update(time) {
         if(this.userData && this.userData.shader) {
