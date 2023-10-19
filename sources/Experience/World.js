@@ -3,6 +3,7 @@ import Experience from './Experience.js'
 import frag2D from './shaders/2D.frag'
 import vert2D from './shaders/2D.vert'
 import Time from './Utils/Time.js'
+import CustomMaterial from './Utils/CustomMaterial.js'
 
 export default class World
 {
@@ -14,6 +15,7 @@ export default class World
         this.resources = this.experience.resources
         this.time = new Time()
         this.mousePos = new THREE.Vector2();
+
    
         
         this.resources.on('groupEnd', (_group) =>
@@ -82,6 +84,23 @@ export default class World
         this.scene.add(this.plane)
 
     }
+
+    setup3D () {
+        const character = this.resources.items.alien
+        console.log(character)
+        const mesh = character.scene
+        const tex = this.resources.items.diffuse
+        tex.flipY = false
+        tex.wrapS = THREE.RepeatWrapping
+        tex.wrapT = THREE.RepeatWrapping
+        this.customMaterial = new CustomMaterial({map : tex})
+        mesh.traverse(o => {
+            if(o.isMesh) {
+                o.material = this.customMaterial
+            }
+        })
+        this.scene.add(mesh)
+    }
     
     setMousePos() {
         document.addEventListener('mousemove', e => {
@@ -94,14 +113,19 @@ export default class World
     setup () {
         const hemi = new THREE.HemisphereLight(0xffffff)
         this.scene.add(hemi)
-        this.setup2D()
+        // this.setup2D()
         // this.addAnimatedCharacter()
-        this.setMousePos()
+        // this.setMousePos()
+        this.setup3D()
       
     }
 
     resize()
     {
+        if(this.plane) {
+            this.plane.material.uniforms.uSize.x = window.innerWidth
+            this.plane.material.uniforms.uSize.y = window.innerHeight
+        }
     }
 
     update()
@@ -113,8 +137,13 @@ export default class World
         if(this.plane) {
             this.plane.material.uniforms.uTime.value = this.time.elapsed*0.001;
             this.plane.material.uniforms.uMouse.value = this.mousePos;
+          
         }
 
+        if(this.customMaterial) {
+            
+            this.customMaterial.update(this.time.elapsed*0.001);
+        }
     }
 
     destroy()
