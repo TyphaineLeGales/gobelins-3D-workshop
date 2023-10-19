@@ -13,6 +13,7 @@ export default class CustomMaterial extends MeshBasicMaterial {
 
         shader.vertexShader = shader.vertexShader.replace('void main() {', [
             'uniform float uTime;',
+            'varying vec3 vPosition;',
             'float clampedSine(float t) {',
             'return sin((t)+1.0)*0.5;',
             '}',
@@ -21,10 +22,21 @@ export default class CustomMaterial extends MeshBasicMaterial {
             '}',
             snoise4,
             'void main() {',
+            'vPosition = position;',
+        ].join('\n'));
+
+        shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
+            'uniform float uTime;',
+            'varying vec3 vPosition;', 
+            'vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {',
+            'return a + b*cos( 6.28318*(c*t+d) );',
+            '}',
+            snoise4,
+            'void main() {',
         ].join('\n'));
     }
     
-    applyEffect (shader, effectName) {
+    patchVertex (shader, effectName) {
         let patch = []
         if(effectName === 'wavy') {
             patch =  [
@@ -54,24 +66,52 @@ export default class CustomMaterial extends MeshBasicMaterial {
                 'transformed += snoise(vec4(transformed, uTime))*0.1;'
             ]
         }
+
+        if(effectName === 'random') {
+            patch = [
+                'float s = 0.5;',
+                'transformed += normalize(normal)*random(transformed.xy)*sin(uTime)*s;'
+            ]
+        }
         // re-insert the include after the patch
         patch.push("#include <project_vertex>")
         shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', patch.join('\n'));
     }
 
+    patchFragment(shader, effectName) {
+        let patch = []
+        if(effectName === 'colorRadar') {
+            console.log(shader.fragmentShader)
+            //pass position as varying
+            patch = [
+               
+                'vec3 col = pal( snoise(vec4(vPosition.xyz, uTime*0.5)*3.0), vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(2.0,1.0,0.0),vec3(0.5,0.20,0.25) );',
+                // 3.0 represents the number of steps taken -> *X /X maps it in the interval 0-1 Here === num of colors
+                'col =  floor(col*6.0)/6.0;', 
+                'diffuseColor=vec4(col, 1.0);'
+                
+            ]
+        }
+        shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', patch.join('\n'));
+        patch.push('#include <color_fragment>')
+
+    }
+
     onBeforeCompile(shader, renderer) {
         super.onBeforeCompile();
         // console.log(shader.vertexShader)
-        // console.log(shader.fragmentShader)
+       
         shader.uniforms.uTime = { value:0 }
 
         
 
         this.addUtils(shader)
-        // this.applyEffect(shader, 'wavy')
-        // this.applyEffect(shader, 'blowUp')
-        // this.applyEffect(shader, 'twist')
-        this.applyEffect(shader, 'noise')
+        // this.patchVertex(shader, 'wavy')
+        // this.patchVertex(shader, 'blowUp')
+        // this.patchVertex(shader, 'twist')
+        // this.patchVertex(shader, 'noise')
+        // this.patchVertex(shader, 'random')
+        this.patchFragment(shader, 'colorRadar')
 
         this.userData.shader = shader
     }
