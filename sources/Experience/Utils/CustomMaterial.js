@@ -4,7 +4,8 @@ import { MeshBasicMaterial} from "three";
 export default class CustomMaterial extends MeshBasicMaterial {
     constructor(params) {
         super({
-            ...params
+            ...params, 
+            transparent :true
         })
     }
 
@@ -81,17 +82,27 @@ export default class CustomMaterial extends MeshBasicMaterial {
     patchFragment(shader, effectName) {
         let patch = []
         if(effectName === 'colorRadar') {
-            console.log(shader.fragmentShader)
-            //pass position as varying
             patch = [
-               
-                'vec3 col = pal( snoise(vec4(vPosition.xyz, uTime*0.5)*3.0), vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(2.0,1.0,0.0),vec3(0.5,0.20,0.25) );',
+                'float speed = 0.2; ',
+                'float sizeOfNoise = 2.0;',
+                'vec3 col = pal( snoise(vec4(vPosition.xyz, uTime*speed)*sizeOfNoise), vec3(0.898, 0.018, 1.168),vec3(0.555, 0.555, 2.208),vec3(1.000, 1.000, 1.000),vec3(1.268, 0.333, 0.667) );',
                 // 3.0 represents the number of steps taken -> *X /X maps it in the interval 0-1 Here === num of colors
                 'col =  floor(col*6.0)/6.0;', 
                 'diffuseColor=vec4(col, 1.0);'
                 
             ]
         }
+        
+        if(effectName === 'noiseOnTexture') {
+            console.log(shader.fragmentShader)
+            patch = [
+                'float speed = 0.2; ',
+                'float sizeOfNoise = 20.0;',
+                'diffuseColor.a = smoothstep(-0.1, 1.0, snoise(vec4(vPosition, uTime*speed)*sizeOfNoise));'         
+            ]
+
+        }
+
         shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', patch.join('\n'));
         patch.push('#include <color_fragment>')
 
@@ -111,7 +122,8 @@ export default class CustomMaterial extends MeshBasicMaterial {
         // this.patchVertex(shader, 'twist')
         // this.patchVertex(shader, 'noise')
         // this.patchVertex(shader, 'random')
-        this.patchFragment(shader, 'colorRadar')
+        // this.patchFragment(shader, 'colorRadar')
+        this.patchFragment(shader, 'noiseOnTexture')
 
         this.userData.shader = shader
     }
