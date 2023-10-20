@@ -4,6 +4,8 @@ import frag2D from './shaders/2D.frag'
 import vert2D from './shaders/2D.vert'
 import Time from './Utils/Time.js'
 import CustomMaterial from './Utils/CustomMaterial.js'
+import GenerativeTerrain from './GenerativeTerrain.js'
+import GUI from 'lil-gui'; 
 
 export default class World
 {
@@ -15,9 +17,10 @@ export default class World
         this.resources = this.experience.resources
         this.time = new Time()
         this.mousePos = new THREE.Vector2();
+        this.gui = new GUI();
+       
 
    
-        
         this.resources.on('groupEnd', (_group) =>
         {
             if(_group.name === 'base')
@@ -116,7 +119,13 @@ export default class World
         // this.setup2D()
         // this.addAnimatedCharacter()
         // this.setMousePos()
-        this.setup3D()
+        // this.setup3D()
+
+      
+        const genTerrain = new GenerativeTerrain(this.gui, this.resources.items.matcap);
+    
+        this.scene.add(genTerrain.scene)
+        console.log(this.scene)
       
     }
 
@@ -130,6 +139,7 @@ export default class World
 
     update()
     {   
+  
         if(this.mixer) {
             this.mixer.update(this.time.deltaTime*0.001)
         }

@@ -122,8 +122,8 @@ export default class CustomMaterial extends MeshBasicMaterial {
         // this.patchVertex(shader, 'twist')
         // this.patchVertex(shader, 'noise')
         // this.patchVertex(shader, 'random')
-        // this.patchFragment(shader, 'colorRadar')
-        this.patchFragment(shader, 'noiseOnTexture')
+        this.patchFragment(shader, 'colorRadar')
+        // this.patchFragment(shader, 'noiseOnTexture')
 
         this.userData.shader = shader
     }
