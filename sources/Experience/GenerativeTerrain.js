@@ -1,33 +1,43 @@
 import * as THREE from 'three'
-import { getRandomInt} from './Utils/Math.js'
+import { getRandomInt, getRandomFloat} from './Utils/Math.js'
 
 
 export default class GenerativeTerrain {
     constructor(gui, matcap) {
-        this.width = 3;
-        this.count = 100;
+        this.width = 1;
+        this.mapSize = 16;
+        this.count = this.mapSize*this.mapSize;
         this.heightMax = 10
         this.colors = [];
         this.gui = gui;
         this.matcap = matcap
         this.planeOffset = 7
         this.positionRange = 5.0
+        this.flowerHeightMax =  8
         this.guiParams = {
             width : this.width,
             count: this.count,
             heightMax : this.heightMax,
             grainAmount : 1.0, 
             positionRange : 5.0, 
-            planeOffset : this.planeOffset
+            planeOffset : this.planeOffset,
+            flowerHeightMax : this.flowerHeightMax
         }
 
+        this.box = new THREE.BoxBufferGeometry(1,1,1)
         this.scene = new THREE.Group()
+        this.map = []
+
         this.guiSetup()
+        this.initMap()
         this.init()
 
-        this.box = new THREE.BoxBufferGeometry(1,1,1)
-        
-      
+    }
+
+    getRandCellState () {
+        const stateIndex = getRandomInt(0, 2)
+        const states = ['building', 'flower', 'empty']
+        return states[stateIndex]
     }
 
     guiSetup () {
@@ -53,15 +63,14 @@ export default class GenerativeTerrain {
             this.width = v
             this.updateOnGuiCHange()}
             );
-        this.gui.add(this.guiParams, 'count', 0, 500).onChange(v => { 
-            this.count = v
-            this.updateOnGuiCHange()
-        });
+        // this.gui.add(this.guiParams, 'count', 0, 500).onChange(v => { 
+        //     this.count = v
+        //     this.updateOnGuiCHange()
+        // });
         this.gui.add(this.guiParams, 'positionRange', 1.0, 30.0).onChange(v => {
             this.positionRange = v
             this.updateOnGuiCHange()
         })
-        console.log(this.gui)
 
     }
 
@@ -97,9 +106,6 @@ export default class GenerativeTerrain {
         
             ].join('\n'));
 
-
-
-            console.log(shader.fragmentShader)
             shader.fragmentShader = shader.fragmentShader.replace(
                 '#include <output_fragment>',
                 [
@@ -113,35 +119,61 @@ export default class GenerativeTerrain {
             );
 
             this.userData.shader = shader;
-
         };
+    }
+
+    initMap () {
+        let cellArray = []
+        for(let i= 0 ; i < this.mapSize; i++) {
+            for(let j=0; j< this.mapSize; j++) {
+       
+                const cell = {
+                    position: {x: i, z: j}, 
+                    state : this.getRandCellState()
+                }
+                console.log(cell.state)
+                cellArray.push(cell)
+            }
+        }
+        this.map = cellArray
+
     }
 
     drawInstancedMesh (count, maxHeight) {
         const obj = new THREE.Object3D()
         const box = new THREE.BoxGeometry()
-        this.mesh = new THREE.InstancedMesh()
-        this.mesh.name = "grid"
+
+        let tempMap = [...this.map]
+        // compute count depending on map size 
         this.mesh = new THREE.InstancedMesh(box, this.mat, count)
         this.mesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage ) // will be updated every frame
-        for(let i = 0; i < this.count; i++){
-            const posX = getRandomInt(-this.positionRange, this.positionRange)
-            const posY = getRandomInt(-this.positionRange, this.positionRange)
-            const height = Math.random()*maxHeight
-            const scaleX = Math.random()*this.width
-            const scaleZ = Math.random()*this.width
-            obj.position.set(posX, height/2, posY)
-            // obj.position.set(posX, 0, posZ)
-            obj.scale.set(scaleX, height, scaleZ)
+        for(let i = 0; i < this.map.length; i++){
+           
+            if(tempMap[i].state === "building") {
+
+                const positions = tempMap[i].position
+  
+                // get info from map
+                const height = Math.random()*this.heightMax
+                obj.position.set(positions.x, height/2, positions.z)
+                
+                const scaleX = getRandomFloat(0.1, 2)
+                const scaleZ = getRandomFloat(0.1, 2)
+                obj.scale.set(scaleX, height, scaleZ)
+            } 
+            
             obj.updateMatrix()
             this.mesh.setMatrixAt(i, obj.matrix)
         }
+        
         this.mesh.instanceMatrix.needsUpdate = true
         this.scene.add(this.mesh)
+        this.map = tempMap
+        console.log(this.scene)
     }
 
     drawPlane () {
-        const plane = new THREE.Mesh(new THREE.PlaneGeometry(this.positionRange*2+this.planeOffset, this.positionRange*2+this.planeOffset), this.planeMat);
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(this.positionRange+this.planeOffset, this.positionRange+this.planeOffset), this.planeMat);
         plane.rotateY(Math.PI / 2);
         plane.rotateX(Math.PI / 2);
         this.scene.add(plane);
@@ -165,28 +197,59 @@ export default class GenerativeTerrain {
        
   
     }
+
+    drawFlowers () {
+        const obj = new THREE.Object3D()
+        const flowerGeo= new THREE.CylinderGeometry(1, 1, 1, 16 ); 
+        const flowerMat = new THREE.MeshBasicMaterial({color : 0xffffff})
+       
+        // const freeSpacesCount = this.map.filter(e => !e.isOccupied).length
+        this.flowerMesh = new THREE.InstancedMesh(flowerGeo, flowerMat, this.count)
+        for(let i = 0; i < this.map.length; i++){
+            if(this.map[i].state === "flower") {
+                const currCell = this.map[i]
+                const height = this.heightMax*Math.random()
+                const r = Math.random()*0.5
+
+                obj.scale.set(r, height, r) // generate random height
+                obj.position.set(currCell.position.x, height/2, currCell.position.z)
+            } else {
+                obj.scale.set(0, 0, 0) // generate random height
+            }
+            obj.updateMatrix()
+            this.flowerMesh.setMatrixAt(i, obj.matrix)
+        }
+
+        this.flowerMesh.instanceMatrix.needsUpdate = true
+        this.scene.add(this.flowerMesh)
+    }
     
     init () {
         const axesHelper = new THREE.AxesHelper( 5 );
         this.scene.add( axesHelper );
+        const gridHelper = new THREE.GridHelper( this.mapSize*2, this.mapSize*2 );
+        this.scene.add( gridHelper );
 
-        
+        this.initMap()
+
         this.mat = new THREE.MeshMatcapMaterial()
         this.mat.matcap = this.matcap
         
-        
-        this.planeMat = new THREE.MeshBasicMaterial({color: '#2c2b2b'})
-        this.planeMat.side = THREE.DoubleSide;
-        this.drawPlane()
+        // this.planeMat = new THREE.MeshBasicMaterial({color: '#2c2b2b'})
+        // this.planeMat.side = THREE.DoubleSide;
+        // this.drawPlane()
 
         this.drawInstancedMesh(this.count,  this.guiParams.heightMax)
         this.scene.add(this.mesh)
         this.addGrain()
 
+       
+
+        // compute map 
+        this.drawFlowers()
     }
 
     update(time) {
-        
         if(this.mat.userData && this.mat.userData.shader) {
             this.mat.userData.shader.uniforms.uTime.value = time
         }
@@ -197,6 +260,7 @@ export default class GenerativeTerrain {
         this.remove()
         this.drawPlane()
         this.drawInstancedMesh(this.count, this.guiParams.heightMax)
+        this.drawFlowers()
     }
 
 
