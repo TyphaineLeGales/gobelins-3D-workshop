@@ -122,9 +122,9 @@ export default class World
         // this.setup3D()
 
       
-        const genTerrain = new GenerativeTerrain(this.gui, this.resources.items.matcap);
+        this.genTerrain = new GenerativeTerrain(this.gui, this.resources.items.matcap);
     
-        this.scene.add(genTerrain.scene)
+        this.scene.add(this.genTerrain.scene)
         console.log(this.scene)
       
     }
@@ -153,6 +153,10 @@ export default class World
         if(this.customMaterial) {
             
             this.customMaterial.update(this.time.elapsed*0.001);
+        }
+
+        if(this.genTerrain) {
+            this.genTerrain.update(this.time.elapsed*0.001)
         }
     }
 

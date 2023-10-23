@@ -1,5 +1,4 @@
 import { MeshBasicMaterial} from "three";
-// import glsl from 'glslify'
 
 export default class CustomMaterial extends MeshBasicMaterial {
     constructor(params) {
