@@ -6,4 +6,8 @@ const getRandomInt = (min, max) => {
 
 const getRandomFloat = (min, max) => (Math.random() * (max - min) + min);
 
-export   { getRandomInt, getRandomFloat }
+const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+
+const mapRange = (value, low1, high1, low2, high2)=> low2 + (high2 - low2) * (value - low1) / (high1 - low1);
+
+export   { getRandomInt, getRandomFloat, clamp, mapRange }
