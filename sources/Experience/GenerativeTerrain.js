@@ -3,13 +3,13 @@ import { getRandomInt, getRandomFloat} from './Utils/Math.js'
 
 
 export default class GenerativeTerrain {
-    constructor(gui, resources) {
+    constructor(camera, gui, resources) {
         this.width = 1;
         this.resources = resources
         this.mapSize = 32;
         this.count = this.mapSize*this.mapSize;
         this.heightMax = 10
-        this.color= 0xffffff
+        this.color= '#f2f8c9'
         this.gui = gui;
         this.matcap = resources.matcap
         this.planeOffset = 7
@@ -18,6 +18,8 @@ export default class GenerativeTerrain {
         this.buildingDensity = 0.25;
         this.flowerDensity = 0.25;
         this.emptyDensity = 0.5;
+        
+        this.camera = camera
         
         this.guiParams = {
             width : this.width,
@@ -28,7 +30,7 @@ export default class GenerativeTerrain {
             planeOffset : this.planeOffset,
             flowerHeightMax : this.flowerHeightMax,
             colorFormats : {
-                string: '#ffffff',
+                string: '#f2f8c9',
                 int: 0xffffff,
                 object: { r: 1, g: 1, b: 1 },
                 array: [ 1, 1, 1 ]
@@ -129,6 +131,7 @@ export default class GenerativeTerrain {
                 'varying vec3 vPosition;',
                 'void main() {',
                 'vPosition = position;',
+               
             ].join('\n'));
 
             const snoise4 = glsl`#pragma glslify: snoise3 = require(glsl-noise/simplex/3d)`;
@@ -166,6 +169,28 @@ export default class GenerativeTerrain {
         };
     }
 
+    taperTige () {
+        this.tigeMat.onBeforeCompile = function ( shader ) {
+             let patch = [
+                'transformed -= normalize(normal)*abs(position.y)*0.05;'
+            ]
+            patch.push("#include <project_vertex>")
+            shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', patch.join('\n'))
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <output_fragment>',
+                [
+                    'outgoingLight.r = 0.7;',
+                    // 'outgoingLight.g = 0.8;',
+                    // 'outgoingLight.r = snoise(vec3(vPosition.yz,sin(uTime)))*5.0;',
+                   
+                    '#include <output_fragment>', 
+                    
+                ].join( '\n' )
+            );
+        }
+
+    }
+
     initMap () {
         let cellArray = []
         for(let i= 0 ; i < this.mapSize; i++) {
@@ -185,10 +210,9 @@ export default class GenerativeTerrain {
     computeCellStates () {
         this.initWeightedStates()
         this.initMap()
-        console.log(this.weightedStates)
     }
 
-    drawInstancedMesh (count, maxHeight) {
+    drawInstancedMesh (count) {
         const obj = new THREE.Object3D()
         const box = new THREE.BoxGeometry()
 
@@ -207,8 +231,8 @@ export default class GenerativeTerrain {
                 const height = Math.random()*this.heightMax
                 obj.position.set(positions.x, height/2, positions.z)
                 
-                const scaleX = getRandomFloat(0.1, 2)
-                const scaleZ = getRandomFloat(0.1, 2)
+                const scaleX = getRandomFloat(0.1, 3)
+                const scaleZ = getRandomFloat(0.1, 3)
                 obj.scale.set(scaleX, height, scaleZ)
             } 
             
@@ -252,20 +276,25 @@ export default class GenerativeTerrain {
         ] );
         
         const tigeGeometry = new THREE.TubeGeometry(curve,12,r,24)
-        const tige = new THREE.Mesh(tigeGeometry, this.mat)
+        const tige = new THREE.Mesh(tigeGeometry, this.tigeMat)
 
         flowerTop.traverse(o => {
             if(o.isMesh) {
                 o.material = this.mat
             }
         })
+
+        flowerTop.lookAt( this.camera.position );
         
         const flowerGroup = new THREE.Group()
         flowerGroup.add(tige,flowerTop )
         this.flowersInScene.push(flowerGroup)
         this.scene.add(flowerGroup)
+
+        const scale = getRandomFloat(0.5, 2)
     
-        flowerTop.position.set(posX, height, posZ);
+        flowerTop.position.set(posX, height-1, posZ);
+        flowerTop.scale.set(scale, scale, scale);
 
     }
 
@@ -310,6 +339,9 @@ export default class GenerativeTerrain {
         this.mat = new THREE.MeshMatcapMaterial()
         this.mat.matcap = this.matcap
 
+        this.tigeMat = new THREE.MeshMatcapMaterial()
+        this.tigeMat.matcap = this.matcap
+
         this.mat2 = new THREE.MeshMatcapMaterial()
         this.mat2.matcap = this.matcap
 
@@ -318,6 +350,7 @@ export default class GenerativeTerrain {
         this.addGrain()
 
         this.drawFlowers()
+        this.taperTige()
     }
 
     update(time) {

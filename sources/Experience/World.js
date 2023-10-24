@@ -90,7 +90,6 @@ export default class World
 
     setup3D () {
         const character = this.resources.items.alien
-        console.log(character)
         const mesh = character.scene
         const tex = this.resources.items.diffuse
         tex.flipY = false
@@ -121,8 +120,9 @@ export default class World
         // this.setMousePos()
         // this.setup3D()
 
-      
-        this.genTerrain = new GenerativeTerrain(this.gui, this.resources);
+        console.log(this.scene)
+        const camera = this.scene.children[0]
+        this.genTerrain = new GenerativeTerrain(camera, this.gui, this.resources);
     
         this.scene.add(this.genTerrain.scene)
         console.log(this.scene)
