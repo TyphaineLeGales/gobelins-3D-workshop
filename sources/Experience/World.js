@@ -122,7 +122,7 @@ export default class World
         // this.setup3D()
 
       
-        this.genTerrain = new GenerativeTerrain(this.gui, this.resources.items.matcap);
+        this.genTerrain = new GenerativeTerrain(this.gui, this.resources);
     
         this.scene.add(this.genTerrain.scene)
         console.log(this.scene)
