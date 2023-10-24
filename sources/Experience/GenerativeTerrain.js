@@ -1,12 +1,12 @@
 import * as THREE from 'three'
-import { getRandomInt, getRandomFloat} from './Utils/Math.js'
+import { getRandomInt, getRandomFloat, clamp, mapRange} from './Utils/Math.js'
 
 
 export default class GenerativeTerrain {
     constructor(camera, gui, resources) {
         this.width = 1;
         this.resources = resources
-        this.mapSize = 32;
+        this.mapSize = 16;
         this.count = this.mapSize*this.mapSize;
         this.heightMax = 10
         this.color= '#f2f8c9'
@@ -18,6 +18,8 @@ export default class GenerativeTerrain {
         this.buildingDensity = 0.25;
         this.flowerDensity = 0.25;
         this.emptyDensity = 0.5;
+        this.animDuration = 10;
+        this.flowerMeshPositions = []
         
         this.camera = camera
         
@@ -120,7 +122,7 @@ export default class GenerativeTerrain {
 
     }
 
-    addGrain () {
+    flowerMaterial () {
         this.mat.onBeforeCompile = function ( shader ) {
             // add custom uniforms
             shader.uniforms.uTime = { value:0 }
@@ -171,24 +173,41 @@ export default class GenerativeTerrain {
 
     taperTige () {
         this.tigeMat.onBeforeCompile = function ( shader ) {
+            shader.uniforms.uSpeed = { value:0 }
              let patch = [
                 'transformed -= normalize(normal)*abs(position.y)*0.05;'
             ]
             patch.push("#include <project_vertex>")
             shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', patch.join('\n'))
+            shader.vertexShader = shader.vertexShader.replace('void main() {', [
+                'varying vec3 vPosition;',
+                'void main() {',
+                'vPosition = position;'
+            ].join('\n'));
+
+
+
+            // step discard 
+            shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
+                'uniform float uSpeed;', 
+                'varying vec3 vPosition;',
+                'void main() {',
+                'if ( vPosition.y > uSpeed ) discard;'
+               
+            ].join('\n'));
+
+            // step to discard according to uSpeed
+
             shader.fragmentShader = shader.fragmentShader.replace(
                 '#include <output_fragment>',
                 [
-                    'outgoingLight.r = 0.7;',
-                    // 'outgoingLight.g = 0.8;',
-                    // 'outgoingLight.r = snoise(vec3(vPosition.yz,sin(uTime)))*5.0;',
-                   
+                    'outgoingLight.g = 0.7;',
                     '#include <output_fragment>', 
                     
                 ].join( '\n' )
             );
+            this.userData.shader = shader;
         }
-
     }
 
     initMap () {
@@ -253,6 +272,7 @@ export default class GenerativeTerrain {
     }
 
     reset () {
+        this.flowerMeshPositions = []
         this.weightedStates = []
         let toBeRemoved = this.flowersInScene
         this.scene.traverse(child => {   
@@ -266,7 +286,8 @@ export default class GenerativeTerrain {
         toBeRemoved.forEach(child => this.scene.remove(child))
     }
 
-    drawFlowerMesh (height, r, posX, posZ, flowerTop) {
+    drawFlowerMesh ( r, posX, posZ, flowerTop) {
+        const height = getRandomFloat(1, this.heightMax+2)
         const curve = new THREE.CatmullRomCurve3( [
             new THREE.Vector3( posX, 0 ,posZ ),
             new THREE.Vector3( posX+Math.random()*0.3, height/5*1, posZ),
@@ -284,18 +305,23 @@ export default class GenerativeTerrain {
             }
         })
 
-        flowerTop.lookAt( this.camera.position );
+        // flowerTop.lookAt( this.camera.position );
         
         const flowerGroup = new THREE.Group()
+
+        // set target values for animation
+        flowerGroup.userData.targetPosY = height;
+        flowerGroup.userData.targetScale = getRandomFloat(0.75, 2)
+        flowerGroup.userData.animationOffset = getRandomFloat(0, 1)
+        //init at zero
+        flowerTop.position.set(posX, 0, posZ);
+        flowerTop.scale.set(0, 0, 0);
+        
         flowerGroup.add(tige,flowerTop )
-        this.flowersInScene.push(flowerGroup)
         this.scene.add(flowerGroup)
+        this.flowersInScene.push(flowerGroup)
 
-        const scale = getRandomFloat(0.5, 2)
-    
-        flowerTop.position.set(posX, height-1, posZ);
-        flowerTop.scale.set(scale, scale, scale);
-
+       
     }
 
     getFlower(type) {
@@ -317,10 +343,9 @@ export default class GenerativeTerrain {
         for(let i = 0; i < this.map.length; i++){
             if(this.map[i].state === "flower") {
                 const currCell = this.map[i]
-                const height = getRandomFloat(1, this.heightMax+2)
                 const r = getRandomFloat(0.2, 0.5)
                 const flowerTop = this.getFlower(getRandomInt(0, 2))
-                this.drawFlowerMesh(height, r, currCell.position.x, currCell.position.z, flowerTop)
+                this.drawFlowerMesh( r, currCell.position.x, currCell.position.z, flowerTop)
             }
         }
     }
@@ -341,23 +366,37 @@ export default class GenerativeTerrain {
 
         this.tigeMat = new THREE.MeshMatcapMaterial()
         this.tigeMat.matcap = this.matcap
+        this.tigeMat.side = THREE.DoubleSide
 
         this.mat2 = new THREE.MeshMatcapMaterial()
         this.mat2.matcap = this.matcap
 
         this.drawInstancedMesh(this.count,  this.guiParams.heightMax)
         this.scene.add(this.mesh)
-        this.addGrain()
+        this.flowerMaterial()
 
         this.drawFlowers()
         this.taperTige()
+    }
+
+    animateFlower (flower,time) {
+        flower.children[1].position.y = mapRange(time, 0, this.animDuration, 0, flower.userData.targetPosY)
+        const currScale = mapRange(time, 0, this.animDuration, 0, flower.userData.targetScale)
+        flower.children[1].scale.set(currScale, currScale, currScale)
+   
     }
 
     update(time) {
         if(this.mat.userData && this.mat.userData.shader) {
             this.mat.userData.shader.uniforms.uTime.value = time
         }
-       
+        
+        if(this.flowersInScene.length > 0 && time < this.animDuration && this.tigeMat.userData.shader) {
+            this.flowersInScene.forEach(flower => {
+                this.animateFlower(flower,  time)
+                this.tigeMat.userData.shader.uniforms.uSpeed.value = time
+            });
+        }
     }
 
     updateOnGuiCHange () {
