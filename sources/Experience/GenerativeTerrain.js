@@ -6,7 +6,7 @@ export default class GenerativeTerrain {
     constructor(gui, resources) {
         this.width = 1;
         this.resources = resources
-        this.mapSize = 16;
+        this.mapSize = 32;
         this.count = this.mapSize*this.mapSize;
         this.heightMax = 10
         this.color= 0xffffff
@@ -15,6 +15,10 @@ export default class GenerativeTerrain {
         this.planeOffset = 7
         this.positionRange = 5.0
         this.flowerHeightMax =  8
+        this.buildingDensity = 0.25;
+        this.flowerDensity = 0.25;
+        this.emptyDensity = 0.5;
+        
         this.guiParams = {
             width : this.width,
             count: this.count,
@@ -28,24 +32,47 @@ export default class GenerativeTerrain {
                 int: 0xffffff,
                 object: { r: 1, g: 1, b: 1 },
                 array: [ 1, 1, 1 ]
-            }
+            }, 
+            buildingDensity: 0.25, 
+            flowerDensity : 0.25, 
+            emptyDensity : 0.5
         }
         this.flowersInScene = []
+        this.weightedStates = []
 
         this.box = new THREE.BoxBufferGeometry(1,1,1)
         this.scene = new THREE.Group()
         this.map = []
 
-        this.guiSetup()
-        this.initMap()
         this.init()
+    }
 
+    initWeightedStates () {
+        
+        const weighted = [{
+            type: 'building', 
+            weight: this.buildingDensity
+        }, {
+            type: 'flower', 
+            weight: this.flowerDensity
+            
+        }, {
+            type: 'empty', 
+            weight: this.emptyDensity
+            
+        }]
+
+        weighted.forEach((e) => {
+            for(let i = 0; i < e.weight*100; i++) {
+                this.weightedStates.push(e.type)
+            }
+        })
+    
     }
 
     getRandCellState () {
-        const stateIndex = getRandomInt(0, 2)
-        const states = ['building', 'flower', 'empty']
-        return states[stateIndex]
+        const stateIndex = getRandomInt(0, this.weightedStates.length)
+        return this.weightedStates[stateIndex]
     }
 
     guiSetup () {
@@ -53,6 +80,21 @@ export default class GenerativeTerrain {
         
         this.gui.addColor( this.guiParams.colorFormats, 'string' ).onChange(v => {
             this.color = v
+            this.updateOnGuiCHange()
+        })
+
+        this.gui.add(this.guiParams, 'buildingDensity', 0.0, 1.0).onChange(v=> {
+            this.buildingDensity = v
+            this.updateOnGuiCHange()
+        })
+
+        this.gui.add(this.guiParams, 'flowerDensity', 0.0, 1.0).onChange(v=> {
+            this.flowerDensity = v
+            this.updateOnGuiCHange()
+        })
+
+        this.gui.add(this.guiParams, 'emptyDensity', 0.0, 1.0).onChange(v=> {
+            this.emptyDensity = v
             this.updateOnGuiCHange()
         })
 
@@ -140,6 +182,12 @@ export default class GenerativeTerrain {
 
     }
 
+    computeCellStates () {
+        this.initWeightedStates()
+        this.initMap()
+        console.log(this.weightedStates)
+    }
+
     drawInstancedMesh (count, maxHeight) {
         const obj = new THREE.Object3D()
         const box = new THREE.BoxGeometry()
@@ -180,17 +228,16 @@ export default class GenerativeTerrain {
         this.scene.add(plane);
     }
 
-    remove () {
+    reset () {
+        this.weightedStates = []
         let toBeRemoved = this.flowersInScene
         this.scene.traverse(child => {   
             if(child.isInstancedMesh) {
                 child.geometry.dispose();
                 toBeRemoved.push(child)
-                
             } 
         })
-        // toBeRemoved.concat(this.flowersInScene)
-        console.log("to be removed", toBeRemoved)
+
         this.flowersInScene = []
         toBeRemoved.forEach(child => this.scene.remove(child))
     }
@@ -219,7 +266,6 @@ export default class GenerativeTerrain {
         this.scene.add(flowerGroup)
     
         flowerTop.position.set(posX, height, posZ);
-        // return flowerGroup
 
     }
 
@@ -240,19 +286,14 @@ export default class GenerativeTerrain {
 
     drawFlowers () {
         for(let i = 0; i < this.map.length; i++){
-            
             if(this.map[i].state === "flower") {
                 const currCell = this.map[i]
                 const height = getRandomFloat(1, this.heightMax+2)
                 const r = getRandomFloat(0.2, 0.5)
                 const flowerTop = this.getFlower(getRandomInt(0, 2))
                 this.drawFlowerMesh(height, r, currCell.position.x, currCell.position.z, flowerTop)
-                // this.scene.add(flower)
             }
         }
-
-        // this.flowerMesh.instanceMatrix.needsUpdate = true
-        // this.scene.add(this.flowerMesh)
     }
     
     init () {
@@ -260,26 +301,22 @@ export default class GenerativeTerrain {
         this.scene.add( axesHelper );
         const gridHelper = new THREE.GridHelper( this.mapSize*2, this.mapSize*2 );
         this.scene.add( gridHelper );
-
-        this.initMap()
+        gridHelper.position.x += this.mapSize/2
+        gridHelper.position.z += this.mapSize/2
+        
+        this.guiSetup()
+        this.computeCellStates()
 
         this.mat = new THREE.MeshMatcapMaterial()
         this.mat.matcap = this.matcap
 
         this.mat2 = new THREE.MeshMatcapMaterial()
         this.mat2.matcap = this.matcap
-        
-        // this.planeMat = new THREE.MeshBasicMaterial({color: '#2c2b2b'})
-        // this.planeMat.side = THREE.DoubleSide;
-        // this.drawPlane()
 
         this.drawInstancedMesh(this.count,  this.guiParams.heightMax)
         this.scene.add(this.mesh)
         this.addGrain()
 
-       
-
-        // compute map 
         this.drawFlowers()
     }
 
@@ -291,7 +328,8 @@ export default class GenerativeTerrain {
     }
 
     updateOnGuiCHange () {
-        this.remove()
+        this.reset()
+        this.computeCellStates()
         this.drawPlane()
         this.drawInstancedMesh(this.count, this.guiParams.heightMax)
         this.drawFlowers()
