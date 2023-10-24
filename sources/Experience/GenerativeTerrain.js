@@ -3,14 +3,15 @@ import { getRandomInt, getRandomFloat} from './Utils/Math.js'
 
 
 export default class GenerativeTerrain {
-    constructor(gui, matcap) {
+    constructor(gui, resources) {
         this.width = 1;
+        this.resources = resources
         this.mapSize = 16;
         this.count = this.mapSize*this.mapSize;
         this.heightMax = 10
-        this.colors = [];
+        this.color= 0xffffff
         this.gui = gui;
-        this.matcap = matcap
+        this.matcap = resources.matcap
         this.planeOffset = 7
         this.positionRange = 5.0
         this.flowerHeightMax =  8
@@ -21,8 +22,15 @@ export default class GenerativeTerrain {
             grainAmount : 1.0, 
             positionRange : 5.0, 
             planeOffset : this.planeOffset,
-            flowerHeightMax : this.flowerHeightMax
+            flowerHeightMax : this.flowerHeightMax,
+            colorFormats : {
+                string: '#ffffff',
+                int: 0xffffff,
+                object: { r: 1, g: 1, b: 1 },
+                array: [ 1, 1, 1 ]
+            }
         }
+        this.flowersInScene = []
 
         this.box = new THREE.BoxBufferGeometry(1,1,1)
         this.scene = new THREE.Group()
@@ -41,14 +49,12 @@ export default class GenerativeTerrain {
     }
 
     guiSetup () {
-        const colorFormats = {
-            string: '#ffffff',
-            int: 0xffffff,
-            object: { r: 1, g: 1, b: 1 },
-            array: [ 1, 1, 1 ]
-        };
+
         
-        this.gui.addColor( colorFormats, 'string' );
+        this.gui.addColor( this.guiParams.colorFormats, 'string' ).onChange(v => {
+            this.color = v
+            this.updateOnGuiCHange()
+        })
 
         this.gui.add(this.guiParams, 'planeOffset', 0, 10).onChange(v => {
             this.planeOffset = v
@@ -63,10 +69,6 @@ export default class GenerativeTerrain {
             this.width = v
             this.updateOnGuiCHange()}
             );
-        // this.gui.add(this.guiParams, 'count', 0, 500).onChange(v => { 
-        //     this.count = v
-        //     this.updateOnGuiCHange()
-        // });
         this.gui.add(this.guiParams, 'positionRange', 1.0, 30.0).onChange(v => {
             this.positionRange = v
             this.updateOnGuiCHange()
@@ -109,8 +111,8 @@ export default class GenerativeTerrain {
             shader.fragmentShader = shader.fragmentShader.replace(
                 '#include <output_fragment>',
                 [
-                    // 'outgoingLight.r = sin(uTime);',
-                    'outgoingLight.g = 0.8;',
+                    'outgoingLight.r = 0.7;',
+                    // 'outgoingLight.g = 0.8;',
                     // 'outgoingLight.r = snoise(vec3(vPosition.yz,sin(uTime)))*5.0;',
                    
                     '#include <output_fragment>', 
@@ -144,7 +146,8 @@ export default class GenerativeTerrain {
 
         let tempMap = [...this.map]
         // compute count depending on map size 
-        this.mesh = new THREE.InstancedMesh(box, this.mat2, count)
+        console.log(this.gui)
+        this.mesh = new THREE.InstancedMesh(box, new THREE.MeshBasicMaterial({color: this.color}), count)
         this.mesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage ) // will be updated every frame
         for(let i = 0; i < this.map.length; i++){
            
@@ -178,27 +181,21 @@ export default class GenerativeTerrain {
     }
 
     remove () {
-        let toBeRemoved = []
+        let toBeRemoved = this.flowersInScene
         this.scene.traverse(child => {   
             if(child.isInstancedMesh) {
                 child.geometry.dispose();
                 toBeRemoved.push(child)
                 
-            } else if(child.isMesh) {
-                child.geometry.dispose();
-                toBeRemoved.push(child)
-            } else if (child.children.length > 0) {}
+            } 
         })
+        // toBeRemoved.concat(this.flowersInScene)
+        console.log("to be removed", toBeRemoved)
+        this.flowersInScene = []
         toBeRemoved.forEach(child => this.scene.remove(child))
-     
-  
     }
 
-    drawFlowerMesh (height, r, posX, posZ) {
-
-        let tigeSubdivisionsAmount = 12;
-        let tigeCutsSubdivisions = 24;
-        
+    drawFlowerMesh (height, r, posX, posZ, flowerTop) {
         const curve = new THREE.CatmullRomCurve3( [
             new THREE.Vector3( posX, 0 ,posZ ),
             new THREE.Vector3( posX+Math.random()*0.3, height/5*1, posZ),
@@ -207,78 +204,55 @@ export default class GenerativeTerrain {
             new THREE.Vector3( posX, height, posZ )
         ] );
         
-        const tigeGeometry = new THREE.TubeGeometry(curve,tigeSubdivisionsAmount,r,tigeCutsSubdivisions)
-        const tigeMaterial = new THREE.MeshBasicMaterial({color:0xff0000, wireframe:true})
-        // const epineMaterial = new THREE.MeshBasicMaterial({color:0xffd500, wireframe:true})
-        // const mat = new THREE.MeshBasicMaterial({color: 0xffffff})
+        const tigeGeometry = new THREE.TubeGeometry(curve,12,r,24)
         const tige = new THREE.Mesh(tigeGeometry, this.mat)
-        const topPlaceholder = new THREE.SphereGeometry( 1.5, 32,12 ); 
-        const topMesh = new THREE.Mesh(topPlaceholder, this.mat)
-        topMesh.position.set(posX, height, posZ);
-        // tige.scale.set(0.1, 1, 0.1)
+
+        flowerTop.traverse(o => {
+            if(o.isMesh) {
+                o.material = this.mat
+            }
+        })
+        
         const flowerGroup = new THREE.Group()
-        const subTop = new THREE.Mesh(new THREE.SphereGeometry( 1, 12, 6 ), this.mat); 
-        subTop.position.set(posX+Math.random()*0.3, height+1.4, posZ+Math.random()*0.3);
-        flowerGroup.add(tige,topMesh, subTop )
-        return flowerGroup
-
-        // this.scene.add(tige)
-
-        // if(flowerType === 1){
-
-        //     let epinesCenterPoints = curve.getPoints(tigeSubdivisionsAmount)
-
-        //     for(let i = 0; i<epinesCenterPoints.length-1; i++){
-        //         const epineGeometry = new THREE.ConeGeometry( tigeWidth*0.5, tigeWidth*3, 16 );
-        //         epineGeometry.translate(0,tigeWidth*1.5,0)
-        //         const epineMesh = new THREE.Mesh(epineGeometry,epineMaterial) 
-               
-        //         epineMesh.position.set(epinesCenterPoints[i].x,epinesCenterPoints[i].y ,epinesCenterPoints[i].z)
-                
-        //         const tigeVector = new THREE.Vector3()
-        //         const tigeNormal = tigeVector.subVectors(epinesCenterPoints[i+1],epinesCenterPoints[i]).normalize()
-
-        //         const arbitraryVector = new THREE.Vector3(1, 0, 0);
-
-        //         const perpendicularVector = new THREE.Vector3().crossVectors(tigeNormal,arbitraryVector)
-
-        //         const quaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),perpendicularVector)
-        //         epineMesh.applyQuaternion(quaternion)
-        //         this.scene.add(epineMesh)
-        //     }
-        // }
+        flowerGroup.add(tige,flowerTop )
+        this.flowersInScene.push(flowerGroup)
+        this.scene.add(flowerGroup)
+    
+        flowerTop.position.set(posX, height, posZ);
+        // return flowerGroup
 
     }
 
+    getFlower(type) {
+        if(type === 0) {
+            return this.resources.items.fleur_1.scene.clone()
+        }
+
+        if(type === 1) {
+            return this.resources.items.fleur_2.scene.clone()
+        }
+
+        if(type === 2) {
+            return this.resources.items.fleur_3.scene.clone()
+        }
+        else console.log("error returning flower geometry")
+    }
+
     drawFlowers () {
-        const obj = new THREE.Object3D()
-        const flowerGeo= new THREE.CylinderGeometry(1, 1, 1, 16 ); 
-        const flowerMat = new THREE.MeshBasicMaterial({color : 0xffffff})
-       
-        
-        this.flowerMesh = new THREE.InstancedMesh(flowerGeo, flowerMat, this.count)
         for(let i = 0; i < this.map.length; i++){
             
             if(this.map[i].state === "flower") {
                 const currCell = this.map[i]
                 const height = getRandomFloat(1, this.heightMax+2)
-                const r = getRandomFloat(0.2, 0.75)
-                const flower = this.drawFlowerMesh(height, r, currCell.position.x, currCell.position.z)
-                this.scene.add(flower)
-                // const height = this.heightMax*Math.random()
-                // const r = 0.1
-
-        //    obj.scale.set(r, height, r) // generate random height
-        //    obj.position.set(currCell.position.x, height/2, currCell.position.z)
+                const r = getRandomFloat(0.2, 0.5)
+                const flowerTop = this.getFlower(getRandomInt(0, 2))
+                this.drawFlowerMesh(height, r, currCell.position.x, currCell.position.z, flowerTop)
+                // this.scene.add(flower)
             }
-            // obj.updateMatrix()
-            // this.flowerMesh.setMatrixAt(i, obj.matrix)
         }
 
-
-
-        this.flowerMesh.instanceMatrix.needsUpdate = true
-        this.scene.add(this.flowerMesh)
+        // this.flowerMesh.instanceMatrix.needsUpdate = true
+        // this.scene.add(this.flowerMesh)
     }
     
     init () {
