@@ -308,6 +308,30 @@ export default class GenerativeTerrain {
         //
         //this.mesh.instanceMatrix.needsUpdate = true
         //this.scene.add(this.mesh)
+   
+        this.mesh = new THREE.InstancedMesh(box, new THREE.MeshBasicMaterial({color: this.color}), count)
+        this.mesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage ) // will be updated every frame
+        for(let i = 0; i < this.map.length; i++){
+           
+            if(tempMap[i].state === "building") {
+
+                const positions = tempMap[i].position
+  
+                // get info from map
+                const height = Math.random()*this.heightMax
+                obj.position.set(positions.x, height/2, positions.z)
+                
+                const scaleX = getRandomFloat(0.1, 3)
+                const scaleZ = getRandomFloat(0.1, 3)
+                obj.scale.set(scaleX, height, scaleZ)
+            } 
+            
+            obj.updateMatrix()
+            this.mesh.setMatrixAt(i, obj.matrix)
+        }
+        
+        this.mesh.instanceMatrix.needsUpdate = true
+        this.scene.add(this.mesh)
         this.map = tempMap
 
         ///////
@@ -360,7 +384,7 @@ export default class GenerativeTerrain {
 
     drawFlowerMesh ( r, posX, posZ, flowerTop) {
         const height = getRandomFloat(3, this.heightMax+3)
-        const scale = getRandomFloat(0.75, 2)
+        const scale = r*2+1
         const curve = new THREE.CatmullRomCurve3( [
             new THREE.Vector3( posX, 0 ,posZ ),
             new THREE.Vector3( posX+Math.random()*0.3, height/5*1, posZ),
@@ -370,7 +394,23 @@ export default class GenerativeTerrain {
         ] );
         
         const tigeGeometry = new THREE.TubeGeometry(curve,12,r,24)
-        //tigeGeometry.setAttribute('delay', )
+
+
+        const delay = getRandomFloat(0, 3)
+        // const delay = 1
+        const delayAttribute = new Float32Array( tigeGeometry.attributes.position.count );
+
+        const targetPos = height;
+        const targetPosAttribute = new Float32Array(tigeGeometry.attributes.position.count);
+				
+        for ( let i = 0; i < delayAttribute.length; i ++ ) {
+            delayAttribute[ i ] = delay;
+            targetPosAttribute[i] = targetPos;
+        }
+
+		tigeGeometry.setAttribute( 'delay', new THREE.BufferAttribute( delayAttribute, 1 ) );
+        tigeGeometry.setAttribute( 'targetPos', new THREE.BufferAttribute( targetPosAttribute, 1 ) );
+
         const tige = new THREE.Mesh(tigeGeometry, this.tigeMat)
 
         flowerTop.traverse(o => {
@@ -388,7 +428,8 @@ export default class GenerativeTerrain {
         // set target values for animation
         flowerGroup.userData.targetPosY = height - scale/2;
         flowerGroup.userData.targetScale = scale
-        flowerGroup.userData.animationOffset = getRandomFloat(0, 1)
+     
+        flowerGroup.userData.animationOffset = delay
         //init at zero
         flowerTop.position.set(posX, 0, posZ);
         flowerTop.scale.set(0, 0, 0);
@@ -457,18 +498,15 @@ export default class GenerativeTerrain {
                 uColor:{
                     value: new THREE.Color('#cc1919')
                 },
-                uSpeed : {value : 0},
+                uSpeed : {value : 0}, 
+                uAnimationDuration : {value: this.animDuration},
+                // uAnimationTime 
                 ...THREE.UniformsLib.lights,
             
             }, 
             lights: true,
             side:THREE.DoubleSide
         })
-
-        // delay attribute
-        
-
-        console.log(this.tigeMat.fragmentShader)
 
         this.mat2 = new THREE.MeshMatcapMaterial()
         this.mat2.matcap = this.matcap
@@ -478,12 +516,13 @@ export default class GenerativeTerrain {
         this.flowerMaterial()
 
         this.drawFlowers()
-        this.taperTige()
+        // this.taperTige()
     }
 
     animateFlower (flower,time) {
-        flower.children[1].position.y = mapRange(time, 0, this.animDuration, 0, flower.userData.targetPosY)
-        const currScale = mapRange(time, 0, this.animDuration, 0, flower.userData.targetScale)
+
+        flower.children[1].position.y = mapRange(time - flower.userData.animationOffset, 0, this.animDuration, 0, flower.userData.targetPosY)
+        const currScale = mapRange(time - flower.userData.animationOffset, 0, this.animDuration, 0, flower.userData.targetScale)
         flower.children[1].scale.set(currScale, currScale, currScale)
     }
 
@@ -493,12 +532,12 @@ export default class GenerativeTerrain {
             // this.mat.uniforms.uTime.value = time
             // console.log(this.tigeMat.uniforms.uSpeed.value)
             
-            this.tigeMat.uniforms.uSpeed.value += 0.001
+            this.tigeMat.uniforms.uSpeed.value = time // calc speed based on time
         }
         
-        if(this.flowersInScene.length > 0 && time < this.animDuration ) {
+        if(this.flowersInScene.length > 0 ) {
             this.flowersInScene.forEach(flower => {
-                this.animateFlower(flower,  time)
+                if(time < flower.userData.animationOffset + this.animDuration )this.animateFlower(flower,  time)
             });
         }
     }
