@@ -4,13 +4,15 @@ import toonFragment from './shaders/toon.frag?raw'
 import toonVertex from './shaders/toon.vert?raw'
 import animatedToonFrag from './shaders/animatedToon.frag?raw' 
 import animatedToonVert from './shaders/animatedToon.vert?raw'
+import buildingVert from './shaders/building.vert?raw'
+import buildingFrag from './shaders/building.frag?raw'
 
 
 export default class GenerativeTerrain {
     constructor(camera, gui, resources) {
         this.width = 1;
         this.resources = resources
-        this.mapSize = 16;
+        this.mapSize = 32;
         this.count = this.mapSize*this.mapSize;
         this.heightMax = 10
         this.color= '#f2f8c9'
@@ -262,37 +264,76 @@ export default class GenerativeTerrain {
         this.initMap()
     }
 
-    drawInstancedMesh (count) {
+    drawInstancedMesh (count, heightMax) {
         const obj = new THREE.Object3D()
         const box = new THREE.BoxGeometry()
 
+        const buildingTexture = this.resources.items.buildingTexture
+
+        var buildingMaterial = new THREE.ShaderMaterial({
+            vertexShader:buildingVert,
+            fragmentShader:buildingFrag,
+            uniforms:{
+                uImage:{
+                    value:buildingTexture
+                }
+            }
+        })
+
+
+
         let tempMap = [...this.map]
         // compute count depending on map size 
-        console.log(this.gui)
-        this.mesh = new THREE.InstancedMesh(box, new THREE.MeshBasicMaterial({color: this.color}), count)
-        this.mesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage ) // will be updated every frame
-        for(let i = 0; i < this.map.length; i++){
-           
-            if(tempMap[i].state === "building") {
-
-                const positions = tempMap[i].position
-  
-                // get info from map
-                const height = Math.random()*this.heightMax
-                obj.position.set(positions.x, height/2, positions.z)
-                
-                const scaleX = getRandomFloat(0.1, 3)
-                const scaleZ = getRandomFloat(0.1, 3)
-                obj.scale.set(scaleX, height, scaleZ)
-            } 
-            
-            obj.updateMatrix()
-            this.mesh.setMatrixAt(i, obj.matrix)
-        }
-        
-        this.mesh.instanceMatrix.needsUpdate = true
-        this.scene.add(this.mesh)
+        //console.log(this.gui)
+        //this.mesh = new THREE.InstancedMesh(box, new THREE.MeshBasicMaterial({color: this.color}), count)
+        //this.mesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage ) // will be updated every frame
+        //for(let i = 0; i < this.map.length; i++){
+        //   
+        //    if(tempMap[i].state === "building") {
+//
+        //        const positions = tempMap[i].position
+  //
+        //        // get info from map
+        //        const height = Math.random()*this.heightMax
+        //        obj.position.set(positions.x, height/2, positions.z)
+        //        
+        //        const scaleX = getRandomFloat(0.1, 3)
+        //        const scaleZ = getRandomFloat(0.1, 3)
+        //        obj.scale.set(scaleX, height, scaleZ)
+        //    } 
+        //    
+        //    obj.updateMatrix()
+        //    this.mesh.setMatrixAt(i, obj.matrix)
+        //}
+        //
+        //this.mesh.instanceMatrix.needsUpdate = true
+        //this.scene.add(this.mesh)
         this.map = tempMap
+
+        ///////
+
+        const buildingGeometry = new THREE.BoxGeometry()
+
+
+        for(let i = 0; i<this.map.length; i++){
+            if(tempMap[i].state === "building"){
+                const buildingClone = buildingGeometry.clone()
+
+                const position = tempMap[i].position
+
+
+                const height = Math.random()*heightMax
+                const scaleX = Math.random()*3
+                const scaleZ = Math.random()*3
+
+                const buildingMesh = new THREE.Mesh(buildingClone, buildingMaterial)
+
+                buildingMesh.position.set(position.x, height/2, position.z)
+                buildingMesh.scale.set(scaleX,height,scaleZ)
+
+                this.scene.add(buildingMesh)
+            }
+        }
     }
 
     drawPlane () {
@@ -307,7 +348,7 @@ export default class GenerativeTerrain {
         this.weightedStates = []
         let toBeRemoved = this.flowersInScene
         this.scene.traverse(child => {   
-            if(child.isInstancedMesh) {
+            if(child.isMesh) {
                 child.geometry.dispose();
                 toBeRemoved.push(child)
             } 
@@ -329,7 +370,7 @@ export default class GenerativeTerrain {
         ] );
         
         const tigeGeometry = new THREE.TubeGeometry(curve,12,r,24)
-        tigeGeometry.setAttribute('delay', )
+        //tigeGeometry.setAttribute('delay', )
         const tige = new THREE.Mesh(tigeGeometry, this.tigeMat)
 
         flowerTop.traverse(o => {
@@ -420,7 +461,8 @@ export default class GenerativeTerrain {
                 ...THREE.UniformsLib.lights,
             
             }, 
-            lights: true
+            lights: true,
+            side:THREE.DoubleSide
         })
 
         // delay attribute
