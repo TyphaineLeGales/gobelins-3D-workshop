@@ -88,7 +88,6 @@ export default class CustomMaterial extends MeshBasicMaterial {
                 // 3.0 represents the number of steps taken -> *X /X maps it in the interval 0-1 Here === num of colors
                 'col =  floor(col*6.0)/6.0;', 
                 'diffuseColor=vec4(col, 1.0);'
-                
             ]
         }
         
@@ -99,7 +98,6 @@ export default class CustomMaterial extends MeshBasicMaterial {
                 'float sizeOfNoise = 20.0;',
                 'diffuseColor.a = smoothstep(-0.1, 1.0, snoise(vec4(vPosition, uTime*speed)*sizeOfNoise));'         
             ]
-
         }
 
         shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', patch.join('\n'));

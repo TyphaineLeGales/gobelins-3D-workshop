@@ -10,4 +10,6 @@ const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
 
 const mapRange = (value, low1, high1, low2, high2)=> low2 + (high2 - low2) * (value - low1) / (high1 - low1);
 
-export   { getRandomInt, getRandomFloat, clamp, mapRange }
+const easeOutQuart = (x) =>  1 - Math.pow(1 - x, 4);
+
+export   { getRandomInt, getRandomFloat, clamp, mapRange, easeOutQuart }

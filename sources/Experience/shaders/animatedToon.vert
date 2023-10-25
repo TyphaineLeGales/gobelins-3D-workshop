@@ -11,6 +11,7 @@ void main() {
   vec4 modelPosition = modelMatrix * vec4(position, 1.0);
   vec4 viewPosition = viewMatrix * modelPosition;
   vec4 clipPosition = projectionMatrix * viewPosition;
+  
   vPosition = position.xyz;
 
   vAnimOffset = delay;
@@ -19,5 +20,6 @@ void main() {
   vNormal = normalize(normalMatrix * normal);
   vViewDir = normalize(-viewPosition.xyz);
 
+  // clipPosition.xyz -= normalize(vNormal)*position.y*0.07;
   gl_Position = clipPosition;
 }

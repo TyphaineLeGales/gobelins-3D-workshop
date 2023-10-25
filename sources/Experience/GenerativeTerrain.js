@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { getRandomInt, getRandomFloat, clamp, mapRange} from './Utils/Math.js'
+import { getRandomInt, getRandomFloat, clamp, mapRange, easeOutQuart} from './Utils/Math.js'
 import toonFragment from './shaders/toon.frag?raw' 
 import toonVertex from './shaders/toon.vert?raw'
 import animatedToonFrag from './shaders/animatedToon.frag?raw' 
@@ -12,7 +12,7 @@ export default class GenerativeTerrain {
     constructor(camera, gui, resources) {
         this.width = 1;
         this.resources = resources
-        this.mapSize = 32;
+        this.mapSize = 64;
         this.count = this.mapSize*this.mapSize;
         this.heightMax = 10
         this.color= '#f2f8c9'
@@ -21,11 +21,12 @@ export default class GenerativeTerrain {
         this.planeOffset = 7
         this.positionRange = 5.0
         this.flowerHeightMax =  8
-        this.buildingDensity = 0.1;
-        this.flowerDensity = 0.2;
-        this.emptyDensity = 0.7;
-        this.animDuration = 10;
+        this.buildingDensity = 0.5;
+        this.flowerDensity = 0.15;
+        this.emptyDensity = 0.8;
+        this.animDuration = 7;
         this.flowerMeshPositions = []
+        this.animationIsDone = false
         
         this.camera = camera
         
@@ -194,7 +195,7 @@ export default class GenerativeTerrain {
             fragmentShader : toonFragment, 
             uniforms : {
                 uColor:{
-                    value: new THREE.Color('#cc1919')
+                    value: new THREE.Color('#3b82f6')
                 },
                 ...THREE.UniformsLib.lights,
             },
@@ -202,45 +203,6 @@ export default class GenerativeTerrain {
 
         })
         
-    }
-
-    taperTige () {
-        // this.tigeMat.onBeforeCompile = function ( shader ) {
-        //     shader.uniforms.uSpeed = { value:0 }
-        //      let patch = [
-        //         'transformed -= normalize(normal)*abs(position.y)*0.05;'
-        //     ]
-        //     patch.push("#include <project_vertex>")
-        //     shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', patch.join('\n'))
-        //     shader.vertexShader = shader.vertexShader.replace('void main() {', [
-        //         'varying vec3 vPosition;',
-        //         'void main() {',
-        //         'vPosition = position;'
-        //     ].join('\n'));
-
-
-
-        //     // step discard 
-        //     shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
-        //         'uniform float uSpeed;', 
-        //         'varying vec3 vPosition;',
-        //         'void main() {',
-        //         'if ( vPosition.y > uSpeed ) discard;'
-               
-        //     ].join('\n'));
-
-        //     // step to discard according to uSpeed
-
-        //     shader.fragmentShader = shader.fragmentShader.replace(
-        //         '#include <output_fragment>',
-        //         [
-        //             'outgoingLight.g = 0.7;',
-        //             '#include <output_fragment>', 
-                    
-        //         ].join( '\n' )
-        //     );
-        //     this.userData.shader = shader;
-        // }
     }
 
     initMap () {
@@ -264,54 +226,65 @@ export default class GenerativeTerrain {
         this.initMap()
     }
 
+    patchBuildingMaterial(tex) {
+       
+        this.buildingMat.onBeforeCompile = function(shader) {
+            shader.uniforms.uPointTex = {value : tex}
+
+            shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
+            'uniform sampler2D uPointTex;', 
+            'void main() {',
+            
+            ].join('\n'));
+            
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <output_fragment>',
+                [
+                    // 'vec4 col = texture2D(uPointTex, uv);',
+                    // 'outgoingLight.r = mix(outgoingLight.r, col.r, 0.8);',
+                    // 'outgoingLight.b = mix(outgoingLight.b, col.b, 0.3);',
+                    // 'outgoingLight.g = 0.1;',
+                    // 'outgoingLight.r = 0.1;',
+                    // 'outgoingLight.rgb = mix(outgoingLight.rgb, col.rgb, vec3(0.5))',
+                    
+                    '#include <output_fragment>', 
+                    
+                ].join( '\n' )
+            );
+            this.userData.shader = shader;
+        }
+    }
+
     drawInstancedMesh (count, heightMax) {
         const obj = new THREE.Object3D()
         const box = new THREE.BoxGeometry()
 
-        const buildingTexture = this.resources.items.buildingTexture
 
-        var buildingMaterial = new THREE.ShaderMaterial({
-            vertexShader:buildingVert,
-            fragmentShader:buildingFrag,
-            uniforms:{
-                uImage:{
-                    value:buildingTexture
-                }
-            }
-        })
+        this.buildingMat = new THREE.MeshMatcapMaterial()
+        this.buildingMat.matcap = this.matcap
 
-
+        this.patchBuildingMaterial(this.resources.items.buildingTexture)
 
         let tempMap = [...this.map]
-        // compute count depending on map size 
-        //console.log(this.gui)
-        //this.mesh = new THREE.InstancedMesh(box, new THREE.MeshBasicMaterial({color: this.color}), count)
-        //this.mesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage ) // will be updated every frame
-        //for(let i = 0; i < this.map.length; i++){
-        //   
-        //    if(tempMap[i].state === "building") {
-//
-        //        const positions = tempMap[i].position
-  //
-        //        // get info from map
-        //        const height = Math.random()*this.heightMax
-        //        obj.position.set(positions.x, height/2, positions.z)
-        //        
-        //        const scaleX = getRandomFloat(0.1, 3)
-        //        const scaleZ = getRandomFloat(0.1, 3)
-        //        obj.scale.set(scaleX, height, scaleZ)
-        //    } 
-        //    
-        //    obj.updateMatrix()
-        //    this.mesh.setMatrixAt(i, obj.matrix)
-        //}
-        //
-        //this.mesh.instanceMatrix.needsUpdate = true
-        //this.scene.add(this.mesh)
+
    
-        this.mesh = new THREE.InstancedMesh(box, new THREE.MeshBasicMaterial({color: this.color}), count)
+        this.mesh = new THREE.InstancedMesh(box, this.buildingMat, count*2)
         this.mesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage ) // will be updated every frame
         for(let i = 0; i < this.map.length; i++){
+
+            const positions = tempMap[i].position
+  
+            // get info from map
+            const height = Math.random()*this.heightMax*3
+            obj.position.set(positions.x, -height/2, positions.z)
+            
+            const scaleX = getRandomFloat(0.1, 3)
+            const scaleZ = getRandomFloat(0.1, 3)
+            obj.scale.set(scaleX, height, scaleZ)
+            
+            
+            obj.updateMatrix()
+            this.mesh.setMatrixAt(i, obj.matrix)
            
             if(tempMap[i].state === "building") {
 
@@ -321,8 +294,8 @@ export default class GenerativeTerrain {
                 const height = Math.random()*this.heightMax
                 obj.position.set(positions.x, height/2, positions.z)
                 
-                const scaleX = getRandomFloat(0.1, 3)
-                const scaleZ = getRandomFloat(0.1, 3)
+                const scaleX = getRandomFloat(0.1, 2)
+                const scaleZ = getRandomFloat(0.1, 2)
                 obj.scale.set(scaleX, height, scaleZ)
             } 
             
@@ -336,35 +309,28 @@ export default class GenerativeTerrain {
 
         ///////
 
-        const buildingGeometry = new THREE.BoxGeometry()
+        // const buildingGeometry = new THREE.BoxGeometry()
 
 
-        for(let i = 0; i<this.map.length; i++){
-            if(tempMap[i].state === "building"){
-                const buildingClone = buildingGeometry.clone()
+        // for(let i = 0; i<this.map.length; i++){
+        //     if(tempMap[i].state === "building"){
+        //         const buildingClone = buildingGeometry.clone()
 
-                const position = tempMap[i].position
+        //         const position = tempMap[i].position
 
 
-                const height = Math.random()*heightMax
-                const scaleX = Math.random()*3
-                const scaleZ = Math.random()*3
+        //         const height = Math.random()*heightMax
+        //         const scaleX = Math.random()*3
+        //         const scaleZ = Math.random()*3
 
-                const buildingMesh = new THREE.Mesh(buildingClone, buildingMaterial)
+        //         const buildingMesh = new THREE.Mesh(buildingClone, buildingMaterial)
 
-                buildingMesh.position.set(position.x, height/2, position.z)
-                buildingMesh.scale.set(scaleX,height,scaleZ)
+        //         buildingMesh.position.set(position.x, height/2, position.z)
+        //         buildingMesh.scale.set(scaleX,height,scaleZ)
 
-                this.scene.add(buildingMesh)
-            }
-        }
-    }
-
-    drawPlane () {
-        const plane = new THREE.Mesh(new THREE.PlaneGeometry(this.positionRange+this.planeOffset, this.positionRange+this.planeOffset), this.planeMat);
-        plane.rotateY(Math.PI / 2);
-        plane.rotateX(Math.PI / 2);
-        this.scene.add(plane);
+        //         this.scene.add(buildingMesh)
+        //     }
+        // }
     }
 
     reset () {
@@ -383,8 +349,8 @@ export default class GenerativeTerrain {
     }
 
     drawFlowerMesh ( r, posX, posZ, flowerTop) {
-        const height = getRandomFloat(3, this.heightMax+3)
-        const scale = r*2+1
+        const height = getRandomFloat(3, this.heightMax*2)
+        const scale = r*3+1
         const curve = new THREE.CatmullRomCurve3( [
             new THREE.Vector3( posX, 0 ,posZ ),
             new THREE.Vector3( posX+Math.random()*0.3, height/5*1, posZ),
@@ -396,7 +362,7 @@ export default class GenerativeTerrain {
         const tigeGeometry = new THREE.TubeGeometry(curve,12,r,24)
 
 
-        const delay = getRandomFloat(0, 3)
+        const delay = getRandomFloat(0, 6)
         // const delay = 1
         const delayAttribute = new Float32Array( tigeGeometry.attributes.position.count );
 
@@ -426,7 +392,7 @@ export default class GenerativeTerrain {
         const flowerGroup = new THREE.Group()
 
         // set target values for animation
-        flowerGroup.userData.targetPosY = height - scale/2;
+        flowerGroup.userData.targetPosY = height - 0.3;
         flowerGroup.userData.targetScale = scale
      
         flowerGroup.userData.animationOffset = delay
@@ -468,12 +434,12 @@ export default class GenerativeTerrain {
     }
     
     init () {
-        const axesHelper = new THREE.AxesHelper( 5 );
-        this.scene.add( axesHelper );
-        const gridHelper = new THREE.GridHelper( this.mapSize*2, this.mapSize*2 );
-        this.scene.add( gridHelper );
-        gridHelper.position.x += this.mapSize/2
-        gridHelper.position.z += this.mapSize/2
+        // const axesHelper = new THREE.AxesHelper( 5 );
+        // this.scene.add( axesHelper );
+        // const gridHelper = new THREE.GridHelper( this.mapSize*2, this.mapSize*2 );
+        // this.scene.add( gridHelper );
+        // gridHelper.position.x += this.mapSize/2
+        // gridHelper.position.z += this.mapSize/2
 
         const ambient = new THREE.AmbientLight(0xffffff, 0.4)
         const directionalLight = new THREE.DirectionalLight( 0xffffff, 1 );
@@ -496,7 +462,7 @@ export default class GenerativeTerrain {
             fragmentShader: animatedToonFrag, 
             uniforms: {
                 uColor:{
-                    value: new THREE.Color('#cc1919')
+                    value: new THREE.Color('#3b82f6')
                 },
                 uSpeed : {value : 0}, 
                 uAnimationDuration : {value: this.animDuration},
@@ -527,15 +493,21 @@ export default class GenerativeTerrain {
     }
 
     update(time) {
+
+        if(time > this.animaDuration) {
+            this.animationIsDone = true
+        }
        
         if(this.tigeMat.uniforms ) {
             // this.mat.uniforms.uTime.value = time
             // console.log(this.tigeMat.uniforms.uSpeed.value)
+
+            // easeOutQuart
             
             this.tigeMat.uniforms.uSpeed.value = time // calc speed based on time
         }
         
-        if(this.flowersInScene.length > 0 ) {
+        if(this.flowersInScene.length > 0  && !this.animationIsDone ) {
             this.flowersInScene.forEach(flower => {
                 if(time < flower.userData.animationOffset + this.animDuration )this.animateFlower(flower,  time)
             });
