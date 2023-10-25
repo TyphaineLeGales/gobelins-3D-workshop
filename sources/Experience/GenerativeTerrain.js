@@ -226,13 +226,13 @@ export default class GenerativeTerrain {
         this.initMap()
     }
 
-    patchBuildingMaterial(tex) {
+    patchBuildingMaterial() {
        
         this.buildingMat.onBeforeCompile = function(shader) {
-            shader.uniforms.uPointTex = {value : tex}
+            // shader.uniforms.uPointTex = {value : tex}
 
             shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
-            'uniform sampler2D uPointTex;', 
+            // 'uniform sampler2D uPointTex;', 
             'void main() {',
             
             ].join('\n'));
@@ -263,7 +263,7 @@ export default class GenerativeTerrain {
         this.buildingMat = new THREE.MeshMatcapMaterial()
         this.buildingMat.matcap = this.matcap
 
-        this.patchBuildingMaterial(this.resources.items.buildingTexture)
+        this.patchBuildingMaterial()
 
         let tempMap = [...this.map]
 
