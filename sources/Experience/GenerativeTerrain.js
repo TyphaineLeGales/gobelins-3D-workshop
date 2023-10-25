@@ -1,5 +1,9 @@
 import * as THREE from 'three'
 import { getRandomInt, getRandomFloat, clamp, mapRange} from './Utils/Math.js'
+import toonFragment from './shaders/toon.frag?raw' 
+import toonVertex from './shaders/toon.vert?raw'
+import animatedToonFrag from './shaders/animatedToon.frag?raw' 
+import animatedToonVert from './shaders/animatedToon.vert?raw'
 
 
 export default class GenerativeTerrain {
@@ -15,9 +19,9 @@ export default class GenerativeTerrain {
         this.planeOffset = 7
         this.positionRange = 5.0
         this.flowerHeightMax =  8
-        this.buildingDensity = 0.25;
-        this.flowerDensity = 0.25;
-        this.emptyDensity = 0.5;
+        this.buildingDensity = 0.1;
+        this.flowerDensity = 0.2;
+        this.emptyDensity = 0.7;
         this.animDuration = 10;
         this.flowerMeshPositions = []
         
@@ -123,91 +127,118 @@ export default class GenerativeTerrain {
     }
 
     flowerMaterial () {
-        this.mat.onBeforeCompile = function ( shader ) {
-            // add custom uniforms
-            shader.uniforms.uTime = { value:0 }
-            shader.uniforms.uRColor = {value : 0.9}
+        // this.mat.onBeforeCompile = function ( shader ) {
+        //     // add custom uniforms
+        //     shader.uniforms.uTime = { value:0 }
+        //     shader.uniforms.uRColor = {value : 0.9}
+        //     shader.uniforms.uLightDir = 
 
-            shader.vertexShader = shader.vertexShader.replace('void main() {', [
-                'uniform float uTime;',
-                'varying vec3 vPosition;',
-                'void main() {',
-                'vPosition = position;',
+        //     shader.vertexShader = shader.vertexShader.replace('void main() {', [
+        //         'uniform float uTime;',
+        //         'varying vec3 vViewDir;',
+        //         // 'varying vec3 vNormal;',
+        //         'varying vec3 vPosition;',
+        //         'void main() {',
+        //         'vPosition = position;',
+        //         'vViewDir = normalize(-vViewPosition.xyz);',
+            
                
-            ].join('\n'));
+        //     ].join('\n'));
 
-            const snoise4 = glsl`#pragma glslify: snoise3 = require(glsl-noise/simplex/3d)`;
+        //     console.log(shader.vertexShader)
+
+        //     const snoise4 = glsl`#pragma glslify: snoise3 = require(glsl-noise/simplex/3d)`;
        
-            shader.fragmentShader = snoise4 + shader.fragmentShader;
+        //     shader.fragmentShader = snoise4 + shader.fragmentShader;
 
-            shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
-                'uniform float uTime;',
-                'uniform float uRColor;',
-                'varying vec3 vPosition;',
-                'float clampedSine(float t) {',
-                'return sin((t)+1.0)*0.5;',
-                '}',
-                'float random(vec2 st){',
-                'return fract(sin(dot(st.xy,vec2(12.9898,78.233)))*43758.5453123);',
-                '}',
+        //     shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
+        //         'uniform float uTime;',
+        //         'varying vec3 vViewDir;',
+        //         'uniform float uRColor;',
+        //         'varying vec3 vPosition;',
+        //         'float clampedSine(float t) {',
+        //         'return sin((t)+1.0)*0.5;',
+        //         '}',
+        //         'float random(vec2 st){',
+        //         'return fract(sin(dot(st.xy,vec2(12.9898,78.233)))*43758.5453123);',
+        //         '}',
    
-                'void main() {',
+        //         'void main() {',
         
-            ].join('\n'));
+        //     ].join('\n'));
 
-            shader.fragmentShader = shader.fragmentShader.replace(
-                '#include <output_fragment>',
-                [
-                    'outgoingLight.r = 0.7;',
-                    // 'outgoingLight.g = 0.8;',
-                    // 'outgoingLight.r = snoise(vec3(vPosition.yz,sin(uTime)))*5.0;',
+        //     shader.fragmentShader = shader.fragmentShader.replace(
+        //         '#include <output_fragment>',
+        //         [
+        //             // 'outgoingLight.r = 0.7;',
+        //             'float NdotL = dot(vNormal, directionalLights[0].direction);',
+        //             'float lightIntensity = (smoothstep(0.0, 0.01, NdotL) + smoothstep(0.8,0.81,NdotL)) * 0.5;',
+        //             // 'vec3 directionalLight = directionalLights[0].color * lightIntensity;',
+        //             'float rimDot = step(0.5,dot(vViewDir, vNormal));',
+        //             'outgoingLight.xyz *= rimDot;',
+        //             'vec3 color = vec3(0.5, 0.5, 0.5);',
+        //             'gl_FragColor = vec4(color * (directionalLights[0].rgb + ambientLightColor.rgb) * rimDot , 1.0);',
+        //             // 'outgoingLight.r = snoise(vec3(vPosition.yz,sin(uTime)))*5.0;',
                    
-                    '#include <output_fragment>', 
+        //             '#include <output_fragment>', 
                     
-                ].join( '\n' )
-            );
+        //         ].join( '\n' )
+        //     );
 
-            this.userData.shader = shader;
-        };
+        //     this.userData.shader = shader;
+        // };
+        this.mat = new THREE.ShaderMaterial({
+            vertexShader : toonVertex, 
+            fragmentShader : toonFragment, 
+            uniforms : {
+                uColor:{
+                    value: new THREE.Color('#cc1919')
+                },
+                ...THREE.UniformsLib.lights,
+            },
+            lights:true
+
+        })
+        
     }
 
     taperTige () {
-        this.tigeMat.onBeforeCompile = function ( shader ) {
-            shader.uniforms.uSpeed = { value:0 }
-             let patch = [
-                'transformed -= normalize(normal)*abs(position.y)*0.05;'
-            ]
-            patch.push("#include <project_vertex>")
-            shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', patch.join('\n'))
-            shader.vertexShader = shader.vertexShader.replace('void main() {', [
-                'varying vec3 vPosition;',
-                'void main() {',
-                'vPosition = position;'
-            ].join('\n'));
+        // this.tigeMat.onBeforeCompile = function ( shader ) {
+        //     shader.uniforms.uSpeed = { value:0 }
+        //      let patch = [
+        //         'transformed -= normalize(normal)*abs(position.y)*0.05;'
+        //     ]
+        //     patch.push("#include <project_vertex>")
+        //     shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', patch.join('\n'))
+        //     shader.vertexShader = shader.vertexShader.replace('void main() {', [
+        //         'varying vec3 vPosition;',
+        //         'void main() {',
+        //         'vPosition = position;'
+        //     ].join('\n'));
 
 
 
-            // step discard 
-            shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
-                'uniform float uSpeed;', 
-                'varying vec3 vPosition;',
-                'void main() {',
-                'if ( vPosition.y > uSpeed ) discard;'
+        //     // step discard 
+        //     shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
+        //         'uniform float uSpeed;', 
+        //         'varying vec3 vPosition;',
+        //         'void main() {',
+        //         'if ( vPosition.y > uSpeed ) discard;'
                
-            ].join('\n'));
+        //     ].join('\n'));
 
-            // step to discard according to uSpeed
+        //     // step to discard according to uSpeed
 
-            shader.fragmentShader = shader.fragmentShader.replace(
-                '#include <output_fragment>',
-                [
-                    'outgoingLight.g = 0.7;',
-                    '#include <output_fragment>', 
+        //     shader.fragmentShader = shader.fragmentShader.replace(
+        //         '#include <output_fragment>',
+        //         [
+        //             'outgoingLight.g = 0.7;',
+        //             '#include <output_fragment>', 
                     
-                ].join( '\n' )
-            );
-            this.userData.shader = shader;
-        }
+        //         ].join( '\n' )
+        //     );
+        //     this.userData.shader = shader;
+        // }
     }
 
     initMap () {
@@ -287,7 +318,8 @@ export default class GenerativeTerrain {
     }
 
     drawFlowerMesh ( r, posX, posZ, flowerTop) {
-        const height = getRandomFloat(1, this.heightMax+2)
+        const height = getRandomFloat(3, this.heightMax+3)
+        const scale = getRandomFloat(0.75, 2)
         const curve = new THREE.CatmullRomCurve3( [
             new THREE.Vector3( posX, 0 ,posZ ),
             new THREE.Vector3( posX+Math.random()*0.3, height/5*1, posZ),
@@ -297,6 +329,7 @@ export default class GenerativeTerrain {
         ] );
         
         const tigeGeometry = new THREE.TubeGeometry(curve,12,r,24)
+        tigeGeometry.setAttribute('delay', )
         const tige = new THREE.Mesh(tigeGeometry, this.tigeMat)
 
         flowerTop.traverse(o => {
@@ -306,12 +339,14 @@ export default class GenerativeTerrain {
         })
 
         // flowerTop.lookAt( this.camera.position );
+
+        // .setRotationFromEuler
         
         const flowerGroup = new THREE.Group()
 
         // set target values for animation
-        flowerGroup.userData.targetPosY = height;
-        flowerGroup.userData.targetScale = getRandomFloat(0.75, 2)
+        flowerGroup.userData.targetPosY = height - scale/2;
+        flowerGroup.userData.targetScale = scale
         flowerGroup.userData.animationOffset = getRandomFloat(0, 1)
         //init at zero
         flowerTop.position.set(posX, 0, posZ);
@@ -357,16 +392,41 @@ export default class GenerativeTerrain {
         this.scene.add( gridHelper );
         gridHelper.position.x += this.mapSize/2
         gridHelper.position.z += this.mapSize/2
+
+        const ambient = new THREE.AmbientLight(0xffffff, 0.4)
+        const directionalLight = new THREE.DirectionalLight( 0xffffff, 1 );
+        directionalLight.position.set(3, 5, 5)
+        directionalLight.lookAt(0, 0, 0)
+        this.scene.add( directionalLight, ambient );
+        // this.scene.add( directionalLight.target );
         
         this.guiSetup()
         this.computeCellStates()
 
-        this.mat = new THREE.MeshMatcapMaterial()
-        this.mat.matcap = this.matcap
+        // this.mat = new THREE.MeshStandardMaterial()
+        // this.mat.matcap = this.matcap
 
-        this.tigeMat = new THREE.MeshMatcapMaterial()
-        this.tigeMat.matcap = this.matcap
-        this.tigeMat.side = THREE.DoubleSide
+        // this.tigeMat = new THREE.MeshMatcapMaterial()
+        // this.tigeMat.matcap = this.matcap
+        // this.tigeMat.side = THREE.DoubleSide
+        this.tigeMat = new THREE.ShaderMaterial({
+            vertexShader : animatedToonVert, 
+            fragmentShader: animatedToonFrag, 
+            uniforms: {
+                uColor:{
+                    value: new THREE.Color('#cc1919')
+                },
+                uSpeed : {value : 0},
+                ...THREE.UniformsLib.lights,
+            
+            }, 
+            lights: true
+        })
+
+        // delay attribute
+        
+
+        console.log(this.tigeMat.fragmentShader)
 
         this.mat2 = new THREE.MeshMatcapMaterial()
         this.mat2.matcap = this.matcap
@@ -383,18 +443,20 @@ export default class GenerativeTerrain {
         flower.children[1].position.y = mapRange(time, 0, this.animDuration, 0, flower.userData.targetPosY)
         const currScale = mapRange(time, 0, this.animDuration, 0, flower.userData.targetScale)
         flower.children[1].scale.set(currScale, currScale, currScale)
-   
     }
 
     update(time) {
-        if(this.mat.userData && this.mat.userData.shader) {
-            this.mat.userData.shader.uniforms.uTime.value = time
+       
+        if(this.tigeMat.uniforms ) {
+            // this.mat.uniforms.uTime.value = time
+            // console.log(this.tigeMat.uniforms.uSpeed.value)
+            
+            this.tigeMat.uniforms.uSpeed.value += 0.001
         }
         
-        if(this.flowersInScene.length > 0 && time < this.animDuration && this.tigeMat.userData.shader) {
+        if(this.flowersInScene.length > 0 && time < this.animDuration ) {
             this.flowersInScene.forEach(flower => {
                 this.animateFlower(flower,  time)
-                this.tigeMat.userData.shader.uniforms.uSpeed.value = time
             });
         }
     }
