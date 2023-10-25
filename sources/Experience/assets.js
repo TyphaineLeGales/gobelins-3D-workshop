@@ -16,6 +16,7 @@ export default [
             { name: 'fleur_1', source: '/assets/Fleur1.glb'}, 
             { name: 'fleur_2', source: '/assets/Fleur2.glb'}, 
             { name: 'fleur_3', source: '/assets/Fleur3.glb'}, 
+            {name:'leaf', source:'/assets/Leaf.glb'},
             {name: 'buildingTexture', source:'/assets/mapBuilding.png', type:'texture'}
 
         ]
