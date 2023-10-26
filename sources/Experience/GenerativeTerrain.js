@@ -116,7 +116,7 @@ export default class GenerativeTerrain {
     
 
     getRandCellState () {
-        const stateIndex = getRandomInt(0, this.weightedStates.length)
+        const stateIndex = Math.round(this.prng()*this.weightedStates.length)
         return this.weightedStates[stateIndex]
     }
 
@@ -292,8 +292,19 @@ export default class GenerativeTerrain {
         this.buildingMat.onBeforeCompile = function(shader) {
             // shader.uniforms.uPointTex = {value : tex}
 
+            shader.vertexShader = shader.vertexShader.replace('void main() {', [
+                // 'uniform sampler2D uPointTex;', 
+                'varying vec2 vUv;',
+                'varying float vPosition;',
+                'void main() {',
+                'vPosition = position.y;',
+                'vUv = uv;'
+                ].join('\n'));
+
             shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
             // 'uniform sampler2D uPointTex;', 
+            'varying vec2 vUv;',
+            'varying float vPosition;',
             'void main() {',
             ].join('\n'));
             
@@ -304,10 +315,12 @@ export default class GenerativeTerrain {
                     // 'outgoingLight.r = mix(outgoingLight.r, col.r, 0.8);',
                     // 'outgoingLight.b = mix(outgoingLight.b, col.b, 0.3);',
                     // 'outgoingLight.g = 0.1;',
-                    // 'outgoingLight.r = 0.1;',
-                    // 'outgoingLight.rgb = mix(outgoingLight.rgb, col.rgb, vec3(0.5))',
+                     'outgoingLight = vec3(vPosition+0.5);',
+                    //'outgoingLight.rgb = mix(outgoingLight.rgb, col.rgb, vec3(0.5))',
+                    
                     
                     '#include <output_fragment>', 
+                    //'gl_FragColor = vec4(1.0,1.0,1.0);',
                     
                 ].join( '\n' )
             );
@@ -327,35 +340,59 @@ export default class GenerativeTerrain {
 
         let tempMap = [...this.map]
 
+        this.topMesh = new THREE.InstancedMesh(box,new THREE.MeshStandardMaterial({color:0xffffff}),count)
+        this.topMesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage )
+
+        for(let i = 0; i < this.map.length; i++){
+            if(tempMap[i].state === "building") {
+
+                const positions = tempMap[i].position
+  
+                // get info from map
+                const height = this.prng()*this.heightMax
+                obj.position.set(positions.x, height/2, positions.z)
+                
+                const scaleX = this.prng()*1.9+0.1
+                const scaleZ = this.prng()*1.9+0.1
+                obj.scale.set(scaleX, height, scaleZ)
+            } 
+            
+            obj.updateMatrix()
+            this.topMesh.setMatrixAt(i, obj.matrix)
+        }
+
+        this.topMesh.instanceMatrix.needsUpdate = true
+        this.scene.add(this.topMesh)
+
    
         this.mesh = new THREE.InstancedMesh(box, this.buildingMat, count*2)
         this.mesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage ) // will be updated every frame
         for(let i = 0; i < this.map.length; i++){
 
             const positions = tempMap[i].position
-            const height = (((Math.abs(positions.x-this.mapSize*0.5)*-1)/(this.mapSize*0.5)+1)*Math.random()*this.heightMax*5 + ((Math.abs(positions.z-this.mapSize*0.5)*-1)/(this.mapSize*0.5)+1)*Math.random()*this.heightMax*5)*0.5
+            const height = (((Math.abs(positions.x-this.mapSize*0.5)*-1)/(this.mapSize*0.5)+1)*this.prng()*this.heightMax*5 + ((Math.abs(positions.z-this.mapSize*0.5)*-1)/(this.mapSize*0.5)+1)*this.prng()*this.heightMax*5)*0.5
             obj.position.set(positions.x, -height/2, positions.z)
             
-            const scaleX = getRandomFloat(0.1, 3)
-            const scaleZ = getRandomFloat(0.1, 3)
+            const scaleX = this.prng()*2.9+0.1
+            const scaleZ = this.prng()*2.9+0.1
             obj.scale.set(scaleX, height, scaleZ)
             
             obj.updateMatrix()
             this.mesh.setMatrixAt(i, obj.matrix)
            
-            if(tempMap[i].state === "building") {
-
-                const positions = tempMap[i].position
-  
-                // get info from map
-                const height = Math.random()*this.heightMax
-                obj.position.set(positions.x, height/2, positions.z)
-                
-                const scaleX = getRandomFloat(0.1, 2)
-                const scaleZ = getRandomFloat(0.1, 2)
-                obj.scale.set(scaleX, height, scaleZ)
-            } 
-            
+            //if(tempMap[i].state === "building") {
+//
+            //    const positions = tempMap[i].position
+  //
+            //    // get info from map
+            //    const height = Math.random()*this.heightMax
+            //    obj.position.set(positions.x, height/2, positions.z)
+            //    
+            //    const scaleX = getRandomFloat(0.1, 2)
+            //    const scaleZ = getRandomFloat(0.1, 2)
+            //    obj.scale.set(scaleX, height, scaleZ)
+            //} 
+            //
             obj.updateMatrix()
             this.mesh.setMatrixAt(i, obj.matrix)
         }
@@ -396,6 +433,14 @@ export default class GenerativeTerrain {
     createLeaf (currPoint,nextPoint, tigeRadius, model, height) {
        
         const leafClone = model.clone()
+        leafClone.name = 'leaf'
+        leafClone.userData = {
+            vitesseMontee:this.prng()*5, 
+            hauteurMax:this.prng()*15,
+            vitesseRotation:this.prng()*0.1,
+            sensRotation: this.prng() < 0.5 ? -1 : 1
+        }
+
         currPoint && leafClone.position.set(0,currPoint.y, 0) 
         const scale = tigeRadius*(3+this.prng()*2)
         leafClone.scale.set(scale,scale,scale)
@@ -405,7 +450,7 @@ export default class GenerativeTerrain {
         const leafPerpendicularVector = new THREE.Vector3().crossVectors(leafNormal,leafArbitraryVector)
         const leafQuaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),leafPerpendicularVector)
         leafClone.applyQuaternion(leafQuaternion)
-        const randMat = getRandomInt(0, 2)
+        const randMat = Math.round(this.prng()*2)
         leafClone.material = randMat > 1 ?  this.flowerMaterials.roseTop : this.flowerMaterials.paquerettePetale
         return leafClone
     }
@@ -428,7 +473,7 @@ export default class GenerativeTerrain {
             ]
         )
         const tigeGeometry = new THREE.TubeGeometry(tigeCurve,12,tigeRadius,24)
-        const delay = getRandomFloat(0, this.delayMax)
+        const delay = this.prng()*this.delayMax
         const delayAttribute = new Float32Array( tigeGeometry.attributes.position.count );
 
         const targetPos = flowerHeight;
@@ -442,7 +487,7 @@ export default class GenerativeTerrain {
 		tigeGeometry.setAttribute( 'delay', new THREE.BufferAttribute( delayAttribute, 1 ) );
         tigeGeometry.setAttribute( 'targetPos', new THREE.BufferAttribute( targetPosAttribute, 1 ) );
         
-        const splinePoints = tigeCurve.getPoints(flowerHeight * 1.5)
+        const splinePoints = tigeCurve.getPoints(flowerHeight * 2)
         const lastSplinePoint = splinePoints[splinePoints.length-1]
         const beforeLastSplinePoint = splinePoints[splinePoints.length-2]
         const scale = tigeRadius * 5
@@ -616,6 +661,15 @@ export default class GenerativeTerrain {
                 if(time < toAnimate.userData.animationOffset + this.animDuration )this.animateFlower(toAnimate,  time)
             });
         }
+
+        this.scene.traverse(o=>{
+            if(o.isMesh){
+                if(o.name === 'leaf'){
+                    o.position.y = ((time)*o.userData.vitesseMontee)%o.userData.hauteurMax
+                    o.rotation.y += o.userData.vitesseRotation * o.userData.sensRotation
+                }
+            }
+        })
     }
 
     updateOnGuiCHange () {
