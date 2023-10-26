@@ -9,5 +9,6 @@ void main() {
   vNormal = normalize(normalMatrix * normal);
   vViewDir = normalize(-viewPosition.xyz);
 
+
   gl_Position = clipPosition;
 }

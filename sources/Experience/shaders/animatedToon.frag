@@ -11,6 +11,10 @@ varying vec3 vViewDir;
 varying vec3 vPosition;
 varying float vAnimOffset;
 varying float vTargetPos;
+varying float vGrowDir;
+varying vec2 vUv;
+varying vec3 vNormal2;
+
 
 uniform float uWindForce;
 
@@ -26,7 +30,8 @@ void main() {
   float rimDot = step(0.5,dot(vViewDir, vNormal));
   float currTime = mapRange((uSpeed-vAnimOffset), 0.0, uAnimationDuration, 0.0,vTargetPos);
   // mapRange(time - flower.userData.animationOffset, 0, this.animDuration, 0, flower.userData.targetPosY)
-  if ( vPosition.y > currTime ) discard;
+  if ( vPosition.y*vGrowDir > currTime ) discard;
 
   gl_FragColor = vec4(uColor * (directionalLight + ambientLightColor) * rimDot , 1.0);
+  // gl_FragColor = vec4(vNormal2, 1.0);
 }
