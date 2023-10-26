@@ -25,7 +25,7 @@ export default class GenerativeTerrain {
         this.matcap = resources.matcap
         this.planeOffset = 7
         this.positionRange = 5.0
-       
+    
         this.buildingDensity = 0.5;
         this.flowerDensity = 0.15;
         this.emptyDensity = 0.8;
@@ -293,15 +293,12 @@ export default class GenerativeTerrain {
         const obj = new THREE.Object3D()
         const box = new THREE.BoxGeometry()
 
-
         this.buildingMat = new THREE.MeshMatcapMaterial()
         this.buildingMat.matcap = this.matcap
 
         this.patchBuildingMaterial()
 
         let tempMap = [...this.map]
-
-   
         this.mesh = new THREE.InstancedMesh(box, this.buildingMat, count*2)
         this.mesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage ) // will be updated every frame
         for(let i = 0; i < this.map.length; i++){
@@ -318,9 +315,7 @@ export default class GenerativeTerrain {
             this.mesh.setMatrixAt(i, obj.matrix)
            
             if(tempMap[i].state === "building") {
-
                 const positions = tempMap[i].position
-  
                 // get info from map
                 const height = Math.random()*this.heightMax
                 obj.position.set(positions.x, height/2, positions.z)
@@ -451,7 +446,6 @@ export default class GenerativeTerrain {
            roseTopClone.children[0].material = this.flowerMaterials.roseTop
             roseTopClone.children[1].material = this.flowerMaterials.roseTop
             animationGroup.add(roseTopClone)
-      
 
            //leaves 
            let leafCenterPoints = []
@@ -507,6 +501,116 @@ export default class GenerativeTerrain {
         this.flowersInScene.push(flowerGroup)
 
     }
+
+    drawRoots () {
+
+        const radius = (this.prng()*0.3)+0.1
+        const flowerHeight = (this.prng()*this.heightMax*5)+3
+        const fAmplitude = this.prng()*this.flowerAmplitude
+        const tigeDecalageX = this.prng() - 0.5 < 0 ? -1 : 1
+        const tigeDecalageZ = this.prng() - 0.5 < 0 ? -1 : 1
+        const count = this.map.length
+
+        const obj = new THREE.Object3D()
+        const tigeCurve = new THREE.CatmullRomCurve3(
+            [
+                new THREE.Vector3(0, 0,0),
+                new THREE.Vector3(this.prng() * tigeDecalageX * fAmplitude,flowerHeight*0.25, this.prng() * tigeDecalageZ * fAmplitude),
+                new THREE.Vector3(this.prng() * tigeDecalageX * fAmplitude,flowerHeight*0.5,this.prng() * tigeDecalageZ * fAmplitude),
+                new THREE.Vector3(this.prng() * tigeDecalageX * fAmplitude,flowerHeight*0.75,this.prng() * tigeDecalageZ * fAmplitude),
+                new THREE.Vector3(this.prng() * tigeDecalageX * fAmplitude,flowerHeight,this.prng() * tigeDecalageZ * fAmplitude)
+            ]
+        )
+
+        this.rootMat = new THREE.MeshStandardMaterial()
+
+        const tigeGeometry = new THREE.TubeGeometry(tigeCurve,12,radius,24)
+        const roots = new THREE.InstancedMesh(tigeGeometry, this.rootMat, count)
+
+        // pass ofset + animation + noise to each
+
+        for(let i = 0; i < this.map.length; i++){
+            if(this.map[i].state === "flower") {
+                
+                const positions = this.map[i].position
+                obj.position.set(positions.x, -flowerHeight, positions.z)
+                const scale = getRandomInt(1, 3)
+                obj.scale.set(scale, 1, scale)
+                obj.updateMatrix()
+                roots.setMatrixAt(i, obj.matrix)
+            }
+        }
+
+        roots.instanceMatrix.needsUpdate = true
+        this.scene.add(roots)
+    }
+
+    patchRootMat () {
+        this.rootMat.onBeforeCompile = function(shader) {
+            // shader.uniforms.uPointTex = {value : tex}
+            shader.uniforms.uColor= {value : new THREE.Color('#3b82f6')}
+            shader.uniforms.uTime= {value : 0}
+
+            shader.vertexShader = shader.vertexShader.replace('void main() {', [
+                // 'uniform sampler2D uPointTex;', 
+                'uniform float uTime; ',
+                'varying vec3 vViewDir;',
+                'varying float vAnimOffset;',
+                'varying float vTargetPos;',
+                'float random(vec2 st){',
+                'return fract(sin(dot(st.xy,vec2(12.9898,78.233)))*43758.5453123);',
+                '}',
+                'void main() {',
+                'vec4 modelPosition = modelMatrix * vec4(position, 1.0);',
+                ' vec4 viewPosition = viewMatrix * modelPosition;',
+                'vNormal = normalize(normalMatrix * normal);',
+                'vViewDir = normalize(-viewPosition.xyz);',
+                ].join('\n'));
+
+            let patch = [
+                'float s = 0.5;',
+                // 'transformed += normalize(normal)*random(transformed.xy)*sin(uTime)*s;', 
+                // 'transformed.xyz += clamp(normalize(normal)*transformed.y);'
+            ]
+            patch.push("#include <project_vertex>")
+
+            shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', patch.join('\n'));
+
+            shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
+            // 'uniform sampler2D uPointTex;', 
+            'uniform float uTime; ',
+            'uniform vec3 uColor; ',
+            'varying vec3 vViewDir;',
+            'varying float vAnimOffset;',
+            'varying float vTargetPos;',
+            'void main() {',
+            
+            ].join('\n'));
+            
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <output_fragment>',
+                [  
+                    '#include <output_fragment>', 
+                    'float NdotL = dot(vNormal, directionalLights[0].direction);',
+                    'float lightIntensity = (smoothstep(0.0, 0.01, NdotL) + smoothstep(0.8,0.81,NdotL)) * 0.3;',
+                    'float rimDot = step(0.5,dot(vViewDir, vNormal));',
+'                    vec3 dirLight = directionalLights[0].color * lightIntensity;',
+                    'vec3 col = uColor* (dirLight + ambientLightColor) * rimDot;',
+                    // 'outgoingLight.r = mix(outgoingLight.r, col.r, 0.8);',
+                    // 'outgoingLight.b = mix(outgoingLight.b, col.b, 0.3);',
+                    // 'outgoingLight.g = 0.1;',
+                    // 'outgoingLight.rgb = mix(outgoingLight.rgb, col.rgb, vec3(0.5))',
+                    'gl_FragColor = vec4(col , 1.0);'
+                    
+                    
+                ].join( '\n' )
+            );
+            this.userData.shader = shader;
+        }
+
+    }
+
+    
     
     init () {
         const ambient = new THREE.AmbientLight(0xffffff, 0.4)
@@ -545,6 +649,8 @@ export default class GenerativeTerrain {
         this.flowerMaterial()
         this.initFlowerMaterials()
         this.createFlowers()
+        this.drawRoots()
+        this.patchRootMat()
     }
 
     animateFlower (flowerPart,time) {
@@ -565,6 +671,11 @@ export default class GenerativeTerrain {
             // easeOutQuart
             
             this.tigeMat.uniforms.uSpeed.value = time // calc speed based on time
+           
+        }
+
+        if(this.rootMat.userData.shader) {
+            this.rootMat.userData.shader.uniforms.uTime.value = time
         }
         
         if(this.flowersInScene.length > 0  && !this.animationIsDone ) {

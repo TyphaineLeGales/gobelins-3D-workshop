@@ -13,7 +13,6 @@ void main() {
   vec4 clipPosition = projectionMatrix * viewPosition;
   
   vPosition = position.xyz;
-
   vAnimOffset = delay;
   vTargetPos = targetPos;
 
