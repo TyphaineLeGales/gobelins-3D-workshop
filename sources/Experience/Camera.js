@@ -25,7 +25,9 @@ export default class Camera
     setInstance()
     {
         // Set up
-        this.instance = new THREE.PerspectiveCamera(25, this.config.width / this.config.height, 0.1, 2500)
+        this.instance = new THREE.PerspectiveCamera(90, this.config.width / this.config.height, 0.1, 2500)
+        this.instance.position.set(-100,10,-100)
+        this.instance.lookAt(32,0,32)
         this.instance.rotation.reorder('YXZ')
 
         this.scene.add(this.instance)
@@ -44,9 +46,14 @@ export default class Camera
         this.modes.debug = {}
         this.modes.debug.instance = this.instance.clone()
         this.modes.debug.instance.rotation.reorder('YXZ')
-        this.modes.debug.instance.position.set(0, 40, 35)
+        this.modes.debug.instance.position.set(70, 15, 70)
         
         this.modes.debug.orbitControls = new OrbitControls(this.modes.debug.instance, this.targetElement)
+        this.modes.debug.orbitControls.target = new THREE.Vector3(32,0,32)
+        this.modes.debug.orbitControls.minAzimuthAngle = -Math.PI*0.25 + Math.PI*0.25
+        this.modes.debug.orbitControls.maxAzimuthAngle = Math.PI*0.25+ Math.PI*0.25
+        this.modes.debug.orbitControls.minPolarAngle = -Math.PI * 0.35
+        this.modes.debug.orbitControls.maxPolarAngle = Math.PI* 0.85 
         this.modes.debug.orbitControls.enabled = this.modes.debug.active
         this.modes.debug.orbitControls.screenSpacePanning = true
         this.modes.debug.orbitControls.enableKeys = false

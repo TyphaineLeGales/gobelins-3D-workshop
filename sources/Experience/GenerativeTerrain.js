@@ -107,6 +107,7 @@ export default class GenerativeTerrain {
         })
 
         const clearColorCube = new THREE.Mesh(cccGeo,this.cccMat)
+        clearColorCube.name = 'clearcolorcube'
         this.scene.add(clearColorCube)
     }
 
@@ -715,6 +716,9 @@ export default class GenerativeTerrain {
                     o.position.y = ((time)*o.userData.vitesseMontee)%o.userData.hauteurMax
                     o.rotation.y += o.userData.vitesseRotation * o.userData.sensRotation
                 }
+            }
+            if(o.name ==="clearcolorcube"){
+                o.rotation.y += 0.01
             }
         })
     }
