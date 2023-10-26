@@ -25,7 +25,7 @@ export default class GenerativeTerrain {
         this.matcap = resources.matcap
         this.planeOffset = 7
         this.positionRange = 5.0
-        this.flowerHeightMax =  8
+       
         this.buildingDensity = 0.5;
         this.flowerDensity = 0.15;
         this.emptyDensity = 0.8;
@@ -360,7 +360,7 @@ export default class GenerativeTerrain {
                 const currCell = this.map[i]
                 const radius = (this.prng()*0.3)+0.1
                 const flowerType = Math.floor((this.prng()*3)+1)
-                const flowerHeight = (this.prng()*7)+3
+                const flowerHeight = (this.prng()*this.heightMax)+3
                 const fAmplitude = this.prng()*this.flowerAmplitude
                 this.createFlower(radius,currCell.position.x,currCell.position.z,flowerType, flowerHeight,fAmplitude)
             }
@@ -550,7 +550,7 @@ export default class GenerativeTerrain {
     animateFlower (flowerPart,time) {
         flowerPart.position.y = mapRange(time -flowerPart.userData.animationOffset, 0, this.animDuration, 0, flowerPart.userData.targetPosY)
       
-        const currScale = mapRange(time - flowerPart.userData.animationOffset, 0, this.animDuration, 0, flowerPart.userData.targetScale)
+        const currScale = clamp(mapRange(time - flowerPart.userData.animationOffset, 0, this.animDuration, 0, flowerPart.userData.targetScale), 0, flowerPart.userData.targetScale)
         flowerPart.scale.set(currScale, currScale, currScale)
     }
 
