@@ -16,9 +16,6 @@ import animatedToonVert from './shaders/animatedToon.vert?raw'
 import clearColorVert from './shaders/clearColor.vert?raw'
 import clearColorFrag from './shaders/clearColor.frag?raw'
 
-import buildingVert from './shaders/building.vert?raw'
-import buildingFrag from './shaders/building.frag?raw'
-
 
 export default class GenerativeTerrain {
     constructor(camera, gui, resources) {
@@ -287,33 +284,6 @@ export default class GenerativeTerrain {
         this.initMap()
     }
 
-    patchBuildingMaterial() {
-       
-        this.buildingMat.onBeforeCompile = function(shader) {
-            // shader.uniforms.uPointTex = {value : tex}
-
-            shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
-            // 'uniform sampler2D uPointTex;', 
-            'void main() {',
-            ].join('\n'));
-            
-            shader.fragmentShader = shader.fragmentShader.replace(
-                '#include <output_fragment>',
-                [
-                    // 'vec4 col = texture2D(uPointTex, uv);',
-                    // 'outgoingLight.r = mix(outgoingLight.r, col.r, 0.8);',
-                    // 'outgoingLight.b = mix(outgoingLight.b, col.b, 0.3);',
-                    // 'outgoingLight.g = 0.1;',
-                    // 'outgoingLight.r = 0.1;',
-                    // 'outgoingLight.rgb = mix(outgoingLight.rgb, col.rgb, vec3(0.5))',
-                    
-                    '#include <output_fragment>', 
-                    
-                ].join( '\n' )
-            );
-            this.userData.shader = shader;
-        }
-    }
 
     drawInstancedMesh (count, heightMax) {
         const obj = new THREE.Object3D()
@@ -321,8 +291,6 @@ export default class GenerativeTerrain {
 
         this.buildingMat = new THREE.MeshMatcapMaterial()
         this.buildingMat.matcap = this.matcap
-
-        this.patchBuildingMaterial()
 
         let tempMap = [...this.map]
         this.mesh = new THREE.InstancedMesh(box, this.buildingMat, count*2)
