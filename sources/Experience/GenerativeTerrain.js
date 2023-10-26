@@ -28,6 +28,7 @@ export default class GenerativeTerrain {
         this.matcap = resources.matcap
         this.planeOffset = 7
         this.positionRange = 5.0
+        this.shouldSetToVisible = true;
     
         this.buildingDensity = 0.5;
         this.flowerDensity = 0.15;
@@ -39,6 +40,8 @@ export default class GenerativeTerrain {
         this.flowerMaterials = {}
         this.delayMax = 6
         this.camera = camera
+
+        this.statAnimationDelay = 2;
         
         this.guiParams = {
             width : this.width,
@@ -436,6 +439,7 @@ export default class GenerativeTerrain {
         leafClone.applyQuaternion(leafQuaternion)
         const randMat = Math.round(this.prng()*2)
         leafClone.material = randMat > 1 ?  this.flowerMaterials.roseTop : this.flowerMaterials.paquerettePetale
+        // leafClone.visible = false // init invisible waiting for the anim to start
         return leafClone
     }
 
@@ -610,7 +614,7 @@ export default class GenerativeTerrain {
                 rootGeo.setAttribute( 'targetPos', new THREE.BufferAttribute( targetPosAttribute, 1 ) );
                 rootGeo.setAttribute( 'growDirection', new THREE.BufferAttribute( growDirectionAttribute, 1 ) );
                 const mesh = new THREE.Mesh(rootGeo,this.tigeMat)
-                // const mesh = new THREE.Mesh(rootGeo, new THREE.MeshBasicMaterial({color: 0xff0000}))
+               
                 mesh.position.y -= height
 
                 this.scene.add(mesh)
@@ -632,6 +636,12 @@ export default class GenerativeTerrain {
         this.computeCellStates()
 
         this.setClearColorCube()
+
+        // set base cube 
+        let baseCube = new THREE.Mesh(new THREE.BoxGeometry(this.mapSize+1, 2, this.mapSize+1), this.buildingMat)
+        baseCube.position.x += this.mapSize/2
+        baseCube.position.z += this.mapSize/2
+        this.scene.add(baseCube)
 
 
         this.colors = this.generateColorPalette()
@@ -681,36 +691,43 @@ export default class GenerativeTerrain {
             this.animationIsDone = true
         }
        
-        if(this.tigeMat) {
 
-            // easeOutQuart
             
-            this.tigeMat.uniforms.uSpeed.value = time // calc speed based on time
-           
-        }
-
-        // if(this.rootMat.userData.shader) {
-        //     this.rootMat.userData.shader.uniforms.uTime.value = time
-        // }
+            if(time > this.statAnimationDelay ) {
+                
+                if(this.flowersInScene.length > 0 && !this.animationIsDone ) {
+                    this.flowersInScene.forEach(flower => {
+                        const toAnimate =  flower.children[1]
+                        if(time < toAnimate.userData.animationOffset + this.animDuration )this.animateFlower(toAnimate,  time)
+                    });
+                if(this.tigeMat) {
         
-        if(this.flowersInScene.length > 0  && !this.animationIsDone ) {
-            this.flowersInScene.forEach(flower => {
-                const toAnimate =  flower.children[1]
-                if(time < toAnimate.userData.animationOffset + this.animDuration )this.animateFlower(toAnimate,  time)
-            });
-        }
-
-        this.scene.traverse(o=>{
-            if(o.isMesh){
-                if(o.name === 'leaf'){
-                    o.position.y = ((time)*o.userData.vitesseMontee)%o.userData.hauteurMax
-                    o.rotation.y += o.userData.vitesseRotation * o.userData.sensRotation
+                    // easeOutQuart
+                    this.tigeMat.uniforms.uSpeed.value = time // calc speed based on time
+                
                 }
             }
-            if(o.name ==="clearcolorcube"){
-                o.rotation.y += 0.01
-            }
-        })
+
+            
+    
+            this.scene.traverse(o=>{
+                if(o.isMesh){
+                    if(o.name === 'leaf'){
+                        // if(this.shouldSetToVisible) {
+                        //     o.visible = true
+                        //     this.shouldSetToVisible = false
+                        // } 
+                        
+                        o.position.y = ((time)*o.userData.vitesseMontee)%o.userData.hauteurMax
+                        o.rotation.y += o.userData.vitesseRotation * o.userData.sensRotation
+                    }
+                }
+                if(o.name ==="clearcolorcube"){
+                    o.rotation.y += 0.01
+                }
+            })
+        }
+        
     }
 
     updateOnGuiCHange () {
