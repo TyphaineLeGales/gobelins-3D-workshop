@@ -13,6 +13,12 @@ import toonVertex from './shaders/toon.vert?raw'
 import animatedToonFrag from './shaders/animatedToon.frag?raw' 
 import animatedToonVert from './shaders/animatedToon.vert?raw'
 
+import clearColorVert from './shaders/clearColor.vert?raw'
+import clearColorFrag from './shaders/clearColor.frag?raw'
+
+import buildingVert from './shaders/building.vert?raw'
+import buildingFrag from './shaders/building.frag?raw'
+
 
 export default class GenerativeTerrain {
     constructor(camera, gui, resources) {
@@ -90,6 +96,25 @@ export default class GenerativeTerrain {
     
     }
 
+    setClearColorCube(){
+        const cccGeo = new THREE.BoxGeometry(700,700,700)
+        this.cccMat = new THREE.ShaderMaterial({
+            vertexShader:clearColorVert,
+            fragmentShader:clearColorFrag,
+            side:THREE.DoubleSide,
+            uniforms:{
+                uTime:{
+                    value:0
+                }
+            }
+        })
+
+        const clearColorCube = new THREE.Mesh(cccGeo,this.cccMat)
+        this.scene.add(clearColorCube)
+    }
+
+    
+
     getRandCellState () {
         const stateIndex = getRandomInt(0, this.weightedStates.length)
         return this.weightedStates[stateIndex]
@@ -131,6 +156,8 @@ export default class GenerativeTerrain {
         })
 
     }
+
+
 
     generateColorPalette(){
         let colorPalette = []
@@ -268,7 +295,6 @@ export default class GenerativeTerrain {
             shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
             // 'uniform sampler2D uPointTex;', 
             'void main() {',
-            
             ].join('\n'));
             
             shader.fragmentShader = shader.fragmentShader.replace(
@@ -518,6 +544,9 @@ export default class GenerativeTerrain {
         this.guiSetup()
         this.computeCellStates()
 
+        this.setClearColorCube()
+
+
         this.colors = this.generateColorPalette()
 
         this.tigeMat = new THREE.ShaderMaterial({
@@ -529,6 +558,9 @@ export default class GenerativeTerrain {
                 },
                 uSpeed : {value : 0}, 
                 uAnimationDuration : {value: this.animDuration},
+                uWindForce:{
+                    value:0
+                },
                 // uAnimationTime 
                 ...THREE.UniformsLib.lights,
             
@@ -560,11 +592,22 @@ export default class GenerativeTerrain {
             this.animationIsDone = true
         }
        
-        if(this.tigeMat.uniforms ) {
+        if(this.tigeMat) {
 
             // easeOutQuart
             
-            this.tigeMat.uniforms.uSpeed.value = time // calc speed based on time
+            this.tigeMat.uniforms.uSpeed.value = time 
+            
+           
+
+                this.tigeMat.uniforms.uWindForce.value = Math.sin(Math.abs(this.elapsedTime)) * 3
+            
+        }
+
+        
+
+        if(this.cccMat){
+            this.cccMat.uniforms.uTime.value = time
         }
         
         if(this.flowersInScene.length > 0  && !this.animationIsDone ) {
