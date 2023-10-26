@@ -7,10 +7,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-<<<<<<< HEAD
     "alea": "^1.0.1",
-=======
->>>>>>> 39d9a35c769617d122e4ffd9ead24a2402306be3
     "lil-gui": "^0.16.1",
     "stats.js": "^0.17.0",
     "stylus": "^0.58.1",
