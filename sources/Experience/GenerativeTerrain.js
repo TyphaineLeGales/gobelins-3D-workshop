@@ -307,15 +307,12 @@ export default class GenerativeTerrain {
         for(let i = 0; i < this.map.length; i++){
 
             const positions = tempMap[i].position
-  
-            // get info from map
-            const height = Math.random()*this.heightMax*3
+            const height = (((Math.abs(positions.x-this.mapSize*0.5)*-1)/(this.mapSize*0.5)+1)*Math.random()*this.heightMax*5 + ((Math.abs(positions.z-this.mapSize*0.5)*-1)/(this.mapSize*0.5)+1)*Math.random()*this.heightMax*5)*0.5
             obj.position.set(positions.x, -height/2, positions.z)
             
             const scaleX = getRandomFloat(0.1, 3)
             const scaleZ = getRandomFloat(0.1, 3)
             obj.scale.set(scaleX, height, scaleZ)
-            
             
             obj.updateMatrix()
             this.mesh.setMatrixAt(i, obj.matrix)
@@ -340,31 +337,6 @@ export default class GenerativeTerrain {
         this.mesh.instanceMatrix.needsUpdate = true
         this.scene.add(this.mesh)
         this.map = tempMap
-
-        ///////
-
-        // const buildingGeometry = new THREE.BoxGeometry()
-
-
-        // for(let i = 0; i<this.map.length; i++){
-        //     if(tempMap[i].state === "building"){
-        //         const buildingClone = buildingGeometry.clone()
-
-        //         const position = tempMap[i].position
-
-
-        //         const height = Math.random()*heightMax
-        //         const scaleX = Math.random()*3
-        //         const scaleZ = Math.random()*3
-
-        //         const buildingMesh = new THREE.Mesh(buildingClone, buildingMaterial)
-
-        //         buildingMesh.position.set(position.x, height/2, position.z)
-        //         buildingMesh.scale.set(scaleX,height,scaleZ)
-
-        //         this.scene.add(buildingMesh)
-        //     }
-        // }
     }
 
     reset () {
@@ -395,11 +367,11 @@ export default class GenerativeTerrain {
         }
     }
 
-    createLeaves (currPoint,nextPoint, tigeRadius, flowerGroup) {
-        const leafModel = this.resources.items.leaf.scene.children[0].children[0].children[0].children[0]
-        const leafClone = leafModel.clone()
-        leafClone.position.set(currPoint.position)
-        const scale = tigeRadius*(5+this.prng()*5)
+    createLeaf (currPoint,nextPoint, tigeRadius, model, height) {
+       
+        const leafClone = model.clone()
+        currPoint && leafClone.position.set(0,currPoint.y, 0) 
+        const scale = tigeRadius*(3+this.prng()*2)
         leafClone.scale.set(scale,scale,scale)
         let leafVector = new THREE.Vector3()
         let leafNormal = nextPoint ? leafVector.subVectors(currPoint,nextPoint).normalize() : leafVector
@@ -407,8 +379,9 @@ export default class GenerativeTerrain {
         const leafPerpendicularVector = new THREE.Vector3().crossVectors(leafNormal,leafArbitraryVector)
         const leafQuaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),leafPerpendicularVector)
         leafClone.applyQuaternion(leafQuaternion)
-        leafClone.material = this.tigeMat
-        flowerGroup.add(leafClone)
+        const randMat = getRandomInt(0, 2)
+        leafClone.material = randMat > 1 ?  this.flowerMaterials.roseTop : this.flowerMaterials.paquerettePetale
+        return leafClone
     }
 
     getFlowerQuaternion (lastPoint, beforeLastPoint) {
@@ -423,9 +396,9 @@ export default class GenerativeTerrain {
             [
                 new THREE.Vector3(posX,0,posZ),
                 new THREE.Vector3(posX + this.prng() * tigeDecalageX * fAmplitude,flowerHeight*0.25,posZ + this.prng() * tigeDecalageZ * fAmplitude),
-                new THREE.Vector3(posX + this.prng() * tigeDecalageX * fAmplitude,flowerHeight*0.5,posZ + this.prng() * tigeDecalageZ * fAmplitude),
-                new THREE.Vector3(posX + this.prng() * tigeDecalageX * fAmplitude,flowerHeight*0.75,posZ + this.prng() * tigeDecalageZ * fAmplitude),
-                new THREE.Vector3(posX + this.prng() * tigeDecalageX * fAmplitude,flowerHeight,posZ + this.prng() * tigeDecalageZ * fAmplitude)
+                new THREE.Vector3(posX + this.prng() * tigeDecalageX * fAmplitude,flowerHeight*0.5,posZ +this.prng() * tigeDecalageZ * fAmplitude),
+                new THREE.Vector3(posX + this.prng() * tigeDecalageX * fAmplitude,flowerHeight*0.75,posZ +this.prng() * tigeDecalageZ * fAmplitude),
+                new THREE.Vector3(posX + this.prng() * tigeDecalageX * fAmplitude,flowerHeight,posZ +this.prng() * tigeDecalageZ * fAmplitude)
             ]
         )
         const tigeGeometry = new THREE.TubeGeometry(tigeCurve,12,tigeRadius,24)
@@ -443,99 +416,93 @@ export default class GenerativeTerrain {
 		tigeGeometry.setAttribute( 'delay', new THREE.BufferAttribute( delayAttribute, 1 ) );
         tigeGeometry.setAttribute( 'targetPos', new THREE.BufferAttribute( targetPosAttribute, 1 ) );
         
-        const tigeMesh = new THREE.Mesh(tigeGeometry,this.tigeMat)
-        this.scene.add(tigeMesh)
-        
         const splinePoints = tigeCurve.getPoints(flowerHeight * 1.5)
         const lastSplinePoint = splinePoints[splinePoints.length-1]
         const beforeLastSplinePoint = splinePoints[splinePoints.length-2]
         const scale = tigeRadius * 5
         const flowerGroup = new THREE.Group()
+        const animationGroup = new THREE.Group()
+        const leafModel = this.resources.items.leaf.scene.children[0].children[0].children[0].children[0]
         
+        const tigeMesh = new THREE.Mesh(tigeGeometry,this.tigeMat)
+        flowerGroup.add(tigeMesh)
 
         if(flowerType === 1){
             // creation des épines
-    
             for(let i = 0; i<splinePoints.length-1; i++){
-                const currPoint = splinePoints[i]
-                const epineGeometry = new THREE.ConeGeometry( tigeRadius*0.5, tigeRadius*3, 16 );
-                epineGeometry.translate(0,tigeRadius*1.5,0)
-                const epineMesh = new THREE.Mesh(epineGeometry,this.tigeMat) 
-                epineMesh.position.set(currPoint.x,0 ,currPoint.z)
-                const tigeVector = new THREE.Vector3()
-                const tigeNormal = tigeVector.subVectors(splinePoints[i+1],currPoint).normalize()
-                const epineArbitraryVector = new THREE.Vector3(tigeNormal.x-(this.prng()-0.5)*Math.PI*0.5, tigeNormal.y-(this.prng()-0.5)*Math.PI*0.5, tigeNormal.z-(this.prng()-0.5)*Math.PI*0.5);
-                const epinePerpendicularVector = new THREE.Vector3().crossVectors(tigeNormal,epineArbitraryVector)
-                const epineQuaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),epinePerpendicularVector)
-                epineMesh.applyQuaternion(epineQuaternion)
-                flowerGroup.add(epineMesh)
+                // const currPoint = splinePoints[i]
+                // const epineGeometry = new THREE.ConeGeometry( tigeRadius*0.5, tigeRadius*3, 16 );
+                // epineGeometry.translate(0,tigeRadius*1.5,0)
+                // const epineMesh = new THREE.Mesh(epineGeometry,this.tigeMat) 
+                // epineMesh.position.set(currPoint.x,0 ,currPoint.z)
+                // const tigeVector = new THREE.Vector3()
+                // const tigeNormal = tigeVector.subVectors(splinePoints[i+1],currPoint).normalize()
+                // const epineArbitraryVector = new THREE.Vector3(tigeNormal.x-(this.prng()-0.5)*Math.PI*0.5, tigeNormal.y-(this.prng()-0.5)*Math.PI*0.5, tigeNormal.z-(this.prng()-0.5)*Math.PI*0.5);
+                // const epinePerpendicularVector = new THREE.Vector3().crossVectors(tigeNormal,epineArbitraryVector)
+                // const epineQuaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),epinePerpendicularVector)
+                // epineMesh.applyQuaternion(epineQuaternion)
+                // flowerGroup.add(epineMesh)
             }
 
             // rose top
            const roseTopClone = this.resources.items.fleur_3.scene.children[0].clone()
            roseTopClone.applyQuaternion(this.getFlowerQuaternion(lastSplinePoint,beforeLastSplinePoint))
 
-           roseTopClone.children[0].material = this.tigeMat
-           roseTopClone.children[1].material = this.flowerMaterials.roseTop
-           flowerGroup.add(roseTopClone)
+           roseTopClone.children[0].material = this.flowerMaterials.roseTop
+            roseTopClone.children[1].material = this.flowerMaterials.roseTop
+            animationGroup.add(roseTopClone)
+      
 
-           //leafes 
+           //leaves 
            let leafCenterPoints = []
-
-           for(let i=0; i<splinePoints.length/5; i++){
-               leafCenterPoints.push(splinePoints[i*4])
-           }
-
+           leafCenterPoints.push(splinePoints[2], splinePoints[8])
            for(let i = 0; i<leafCenterPoints.length; i++){
-                this.createLeaves(leafCenterPoints[i], leafCenterPoints[i+1], tigeRadius, flowerGroup)
+            
+                animationGroup.add(this.createLeaf(leafCenterPoints[i], leafCenterPoints[i+1], tigeRadius, leafModel,flowerHeight))
             }
+            
 
         }
 
         if(flowerType === 2) {
             
             for(let i = 0; i<splinePoints.length-1; i++){
-                this.createLeaves(splinePoints[i], splinePoints[i+1], tigeRadius, flowerGroup)
+                animationGroup.add(this.createLeaf(splinePoints[i], splinePoints[i+1], tigeRadius, leafModel,flowerHeight))
            }
 
-           // paquerette top 
            const paqueretteClone = this.resources.items.fleur_2.scene.children[0].clone()
-
            paqueretteClone.applyQuaternion(this.getFlowerQuaternion(lastSplinePoint,beforeLastSplinePoint))
            
            paqueretteClone.children[0].material = this.flowerMaterials.paquerettePetale
            paqueretteClone.children[1].material = this.flowerMaterials.paqueretteBouton
-           paqueretteClone.children[2].material = this.tigeMat
+           paqueretteClone.children[2].material = this.flowerMaterials.paquerettePetale
 
-           flowerGroup.add(paqueretteClone)
+        animationGroup.add(paqueretteClone)
+           
         }
 
         if(flowerType === 3) {
             
-       
            const fleurClone = this.resources.items.fleur_1.scene.children[0].clone()
            fleurClone.applyQuaternion(this.getFlowerQuaternion(lastSplinePoint,beforeLastSplinePoint))
-
            fleurClone.children[0].material =  this.flowerMaterials.fleurPetale
            fleurClone.children[1].material =  this.flowerMaterials.fleurBouton
 
-           fleurClone.children[2].material = this.tigeMat
-           flowerGroup.add(fleurClone)
+           fleurClone.children[2].material = this.flowerMaterials.fleurPetale
+            animationGroup.add(fleurClone)
+          
         }
 
-        flowerGroup.position.set(lastSplinePoint.x,0,lastSplinePoint.z)
-        flowerGroup.scale.set(scale, scale,scale)
+        animationGroup.position.set(lastSplinePoint.x,0,lastSplinePoint.z)
+        animationGroup.scale.set(scale, scale,scale)
 
-        // pass data for animation
          // set target values for animation
-        flowerGroup.userData.targetPosY = lastSplinePoint.y;
-        flowerGroup.userData.targetScale = scale
+        animationGroup.userData.targetPosY = lastSplinePoint.y;
+        animationGroup.userData.targetScale = scale
     
-        flowerGroup.userData.animationOffset = delay
-        //init at zero
-        // flowerTop.position.set(lastPoint.x,lastPoint.y,lastPoint.z);
-        // flowerTop.scale.set(0, 0, 0);
-        
+        animationGroup.userData.animationOffset = delay
+
+        flowerGroup.add(animationGroup)
         this.scene.add(flowerGroup)
         this.flowersInScene.push(flowerGroup)
 
@@ -580,10 +547,11 @@ export default class GenerativeTerrain {
         this.createFlowers()
     }
 
-    animateFlower (flower,time) {
-        flower.position.y = mapRange(time - flower.userData.animationOffset, 0, this.animDuration, 0, flower.userData.targetPosY)
-        // const currScale = mapRange(time - flower.userData.animationOffset, 0, this.animDuration, 0, flower.userData.targetScale)
-        // flower.scale.set(currScale, currScale, currScale)
+    animateFlower (flowerPart,time) {
+        flowerPart.position.y = mapRange(time -flowerPart.userData.animationOffset, 0, this.animDuration, 0, flowerPart.userData.targetPosY)
+      
+        const currScale = mapRange(time - flowerPart.userData.animationOffset, 0, this.animDuration, 0, flowerPart.userData.targetScale)
+        flowerPart.scale.set(currScale, currScale, currScale)
     }
 
     update(time) {
@@ -600,9 +568,9 @@ export default class GenerativeTerrain {
         }
         
         if(this.flowersInScene.length > 0  && !this.animationIsDone ) {
-            console.log("is animating")
             this.flowersInScene.forEach(flower => {
-                if(time < flower.userData.animationOffset + this.animDuration )this.animateFlower(flower,  time)
+                const toAnimate =  flower.children[1]
+                if(time < toAnimate.userData.animationOffset + this.animDuration )this.animateFlower(toAnimate,  time)
             });
         }
     }
