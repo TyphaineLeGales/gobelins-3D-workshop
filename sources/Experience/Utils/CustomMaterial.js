@@ -88,6 +88,10 @@ export default class CustomMaterial extends MeshBasicMaterial {
                 // 3.0 represents the number of steps taken -> *X /X maps it in the interval 0-1 Here === num of colors
                 'col =  floor(col*6.0)/6.0;', 
                 'diffuseColor=vec4(col, 1.0);'
+<<<<<<< HEAD
+=======
+                
+>>>>>>> 39d9a35c769617d122e4ffd9ead24a2402306be3
             ]
         }
         

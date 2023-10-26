@@ -14,7 +14,6 @@ import animatedToonFrag from './shaders/animatedToon.frag?raw'
 import animatedToonVert from './shaders/animatedToon.vert?raw'
 
 
-
 export default class GenerativeTerrain {
     constructor(camera, gui, resources) {
         this.width = 1;
@@ -548,7 +547,6 @@ export default class GenerativeTerrain {
         directionalLight.position.set(3, 5, 5)
         directionalLight.lookAt(0, 0, 0)
         this.scene.add( directionalLight, ambient );
-
         
         this.guiSetup()
         this.computeCellStates()

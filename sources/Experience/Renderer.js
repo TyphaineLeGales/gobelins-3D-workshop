@@ -30,9 +30,14 @@ export default class Renderer
 
     setInstance()
     {
+<<<<<<< HEAD
         // this.clearColor = '#3b82f6'
         // this.clearColor = '#F4F4F4'
         this.clearColor = '#CACBCD'
+=======
+        this.clearColor = '#3b82f6'
+        // this.clearColor = '#F4F4F4'
+>>>>>>> 39d9a35c769617d122e4ffd9ead24a2402306be3
         // this.clearColor = '#819c97'
 
         // Renderer
