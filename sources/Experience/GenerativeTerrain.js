@@ -380,21 +380,6 @@ export default class GenerativeTerrain {
 
             obj.updateMatrix()
             this.mesh.setMatrixAt(i, obj.matrix)
-
-            if(tempMap[i].state === "building") {
-                const positions = tempMap[i].position
-
-                // get info from map
-                const height = Math.random()*this.heightMax
-                obj.position.set(positions.x, height/2, positions.z)
-
-                const scaleX = getRandomFloat(0.1, 2)
-                const scaleZ = getRandomFloat(0.1, 2)
-                obj.scale.set(scaleX, height, scaleZ)
-            } 
-
-            obj.updateMatrix()
-            this.mesh.setMatrixAt(i, obj.matrix)
         }
         
         this.mesh.instanceMatrix.needsUpdate = true
@@ -589,18 +574,22 @@ export default class GenerativeTerrain {
         
         for(let i = 0; i < this.map.length; i++){
             if(this.map[i].state === "flower") {
-                const height = (this.prng()*this.heightMax*5)+3
+                const height = (this.prng()*this.heightMax*3)
                 const positions = this.map[i].position
+                const posX = positions.x
+                const posZ = positions.z
                 const radius = (this.prng()*0.3)+0.1
+                const randOffset = () => this.prng() * tigeDecalageX * fAmplitude
                 const rootCurve = new THREE.CatmullRomCurve3(
                     [
-                        new THREE.Vector3(positions.x, 0,positions.z),
-                        new THREE.Vector3(positions.x+this.prng() * tigeDecalageX * fAmplitude,height*0.25,positions.z+ this.prng() * tigeDecalageZ * fAmplitude),
-                        new THREE.Vector3(positions.x+this.prng() * tigeDecalageX * fAmplitude,height*0.5,positions.z+this.prng() * tigeDecalageZ * fAmplitude),
-                        new THREE.Vector3(positions.x+this.prng() * tigeDecalageX * fAmplitude,height*0.75,positions.z+this.prng() * tigeDecalageZ * fAmplitude),
-                        new THREE.Vector3(positions.x+this.prng() * tigeDecalageX * fAmplitude,height,positions.z+this.prng() * tigeDecalageZ * fAmplitude)
+                        new THREE.Vector3(posX,0,posZ),
+                        new THREE.Vector3(posX - randOffset(),height*0.25,posZ + randOffset()),
+                        new THREE.Vector3(posX - randOffset(),height*0.5,posZ +randOffset()),
+                        new THREE.Vector3(posX - randOffset(),height*0.75,posZ +randOffset()),
+                        new THREE.Vector3(posX - randOffset(),height,posZ +randOffset())
                     ]
                 )
+             
                 const rootGeo = new THREE.TubeGeometry(rootCurve,12,radius,24)
 
                 // set attributes
@@ -621,6 +610,7 @@ export default class GenerativeTerrain {
                 rootGeo.setAttribute( 'targetPos', new THREE.BufferAttribute( targetPosAttribute, 1 ) );
                 rootGeo.setAttribute( 'growDirection', new THREE.BufferAttribute( growDirectionAttribute, 1 ) );
                 const mesh = new THREE.Mesh(rootGeo,this.tigeMat)
+                // const mesh = new THREE.Mesh(rootGeo, new THREE.MeshBasicMaterial({color: 0xff0000}))
                 mesh.position.y -= height
 
                 this.scene.add(mesh)
