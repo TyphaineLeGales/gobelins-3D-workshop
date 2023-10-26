@@ -120,12 +120,12 @@ export default class World
         // this.setMousePos()
         // this.setup3D()
 
-        console.log(this.scene)
+        //console.log(this.scene)
         const camera = this.scene.children[0]
         this.genTerrain = new GenerativeTerrain(camera, this.gui, this.resources);
     
         this.scene.add(this.genTerrain.scene)
-        console.log(this.scene)
+        //console.log(this.scene)
       
     }
 

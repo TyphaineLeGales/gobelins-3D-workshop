@@ -25,7 +25,7 @@ export default class Camera
     setInstance()
     {
         // Set up
-        this.instance = new THREE.PerspectiveCamera(25, this.config.width / this.config.height, 0.1, 350)
+        this.instance = new THREE.PerspectiveCamera(25, this.config.width / this.config.height, 0.1, 2500)
         this.instance.rotation.reorder('YXZ')
 
         this.scene.add(this.instance)
@@ -52,7 +52,10 @@ export default class Camera
         this.modes.debug.orbitControls.enableKeys = false
         this.modes.debug.orbitControls.zoomSpeed = 0.25
         this.modes.debug.orbitControls.enableDamping = true
+        this.modes.debug.orbitControls.maxDistance = 300
         this.modes.debug.orbitControls.update()
+
+      
     }
 
 

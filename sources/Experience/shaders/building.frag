@@ -12,9 +12,6 @@ void main()
     float borderX = (smoothstep(0.0,0.05,vUv.x)+smoothstep(1.0,0.95,vUv.x))-1.0;
     float borderY = (smoothstep(0.0,0.05,vUv.y)+smoothstep(1.0,0.95,vUv.y))-1.0;
 
-    vec4 col = texture2D(uImage, vUv);
-
-    vec4 test = mix(vec4(141.0/255.0,149.0/255.0,143.0/255.0,1.0),col,0.2);
 
     gl_FragColor = test - noise * 0.6;
 
