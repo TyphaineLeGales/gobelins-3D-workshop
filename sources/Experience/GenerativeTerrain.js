@@ -610,7 +610,6 @@ export default class GenerativeTerrain {
     }
 
     
-    
     init () {
         const ambient = new THREE.AmbientLight(0xffffff, 0.4)
         const directionalLight = new THREE.DirectionalLight( 0xffffff, 1 );
