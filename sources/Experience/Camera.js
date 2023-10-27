@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import Experience from './Experience.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import Time from './Utils/Time.js'
 
 export default class Camera
 {
@@ -14,6 +15,14 @@ export default class Camera
         this.sizes = this.experience.sizes
         this.targetElement = this.experience.targetElement
         this.scene = this.experience.scene
+        this.time = new Time()
+
+        this.cameraPositionValue = Math.PI*0.75
+        this.hasCameraPassedFirstRotaion = false
+        this.hasCameraPassedSecond = false
+        this.cameraPositionZoomValue = 70
+        this.cameraPositionValueThird =Math.PI*1.49
+
 
         // Set up
         this.mode = 'debug' // defaultCamera \ debugCamera
@@ -46,21 +55,22 @@ export default class Camera
         this.modes.debug = {}
         this.modes.debug.instance = this.instance.clone()
         this.modes.debug.instance.rotation.reorder('YXZ')
-        this.modes.debug.instance.position.set(70, 15, 70)
+        this.modes.debug.instance.position.set(Math.sin(this.cameraPositionValue)*this.cameraPositionZoomValue+32, 20, Math.cos(this.cameraPositionValue)*this.cameraPositionZoomValue+32)
+        this.modes.debug.instance.lookAt(32,0,32)
         
-        this.modes.debug.orbitControls = new OrbitControls(this.modes.debug.instance, this.targetElement)
-        this.modes.debug.orbitControls.target = new THREE.Vector3(32,0,32)
-        this.modes.debug.orbitControls.minAzimuthAngle = -Math.PI*0.25 + Math.PI*0.25
-        this.modes.debug.orbitControls.maxAzimuthAngle = Math.PI*0.25+ Math.PI*0.25
-        this.modes.debug.orbitControls.minPolarAngle = -Math.PI * 0.35
-        this.modes.debug.orbitControls.maxPolarAngle = Math.PI* 0.85 
-        this.modes.debug.orbitControls.enabled = this.modes.debug.active
-        this.modes.debug.orbitControls.screenSpacePanning = true
-        this.modes.debug.orbitControls.enableKeys = false
-        this.modes.debug.orbitControls.zoomSpeed = 0.25
-        this.modes.debug.orbitControls.enableDamping = true
-        this.modes.debug.orbitControls.maxDistance = 300
-        this.modes.debug.orbitControls.update()
+        //this.modes.debug.orbitControls = new OrbitControls(this.modes.debug.instance, this.targetElement)
+        //this.modes.debug.orbitControls.target = new THREE.Vector3(32,0,32)
+        //this.modes.debug.orbitControls.minAzimuthAngle = -Math.PI*0.25 + Math.PI*0.25
+        //this.modes.debug.orbitControls.maxAzimuthAngle = Math.PI*0.25+ Math.PI*0.25
+        //this.modes.debug.orbitControls.minPolarAngle = -Math.PI * 0.35
+        //this.modes.debug.orbitControls.maxPolarAngle = Math.PI* 0.85 
+        //this.modes.debug.orbitControls.enabled = this.modes.debug.active
+        //this.modes.debug.orbitControls.screenSpacePanning = true
+        //this.modes.debug.orbitControls.enableKeys = false
+        //this.modes.debug.orbitControls.zoomSpeed = 0.25
+        //this.modes.debug.orbitControls.enableDamping = true
+        //this.modes.debug.orbitControls.maxDistance = 300
+        //this.modes.debug.orbitControls.update()
 
       
     }
@@ -80,13 +90,50 @@ export default class Camera
 
     update()
     {
+        if(this.cameraPositionValue<Math.PI*1.49 && !this.hasCameraPassedFirstRotaion){
+            this.cameraPositionValue += 0.01
+            this.modes.debug.instance.position.set(Math.sin(this.cameraPositionValue)*this.cameraPositionZoomValue+32, 20, Math.cos(this.cameraPositionValue)*this.cameraPositionZoomValue+32)
+            this.modes.debug.instance.lookAt(32,0,32)
+        }else{
+            this.hasCameraPassedFirstRotaion = true
+        }
+
+        if(this.cameraPositionZoomValue > 5 && !this.hasCameraPassedSecond && this.hasCameraPassedFirstRotaion){
+            this.cameraPositionZoomValue -= 0.5
+            //console.log(this.cameraPositionZoomValue)
+            this.modes.debug.instance.position.set(Math.sin(this.cameraPositionValue)*this.cameraPositionZoomValue+32, 20, Math.cos(this.cameraPositionValue)*this.cameraPositionZoomValue+32)
+            //this.modes.debug.instance.lookAt(32,0,32)
+        }
+
+        
+
+        if(this.hasCameraPassedFirstRotaion && this.cameraPositionZoomValue<7){
+            this.hasCameraPassedSecond = true
+        }
+
+        if(this.hasCameraPassedSecond && this.cameraPositionZoomValue< 80){
+            this.cameraPositionZoomValue += 0.3
+            //console.log(this.cameraPositionZoomValue)
+            this.modes.debug.instance.position.set(Math.sin(this.cameraPositionValue)*this.cameraPositionZoomValue+32, 20, Math.cos(this.cameraPositionValue)*this.cameraPositionZoomValue+32)
+            this.modes.debug.instance.lookAt(32,(this.cameraPositionZoomValue-5)/4.33,32)
+        }
+
+        if(this.hasCameraPassedSecond && this.cameraPositionValue < Math.PI * 3){
+            this.cameraPositionValue += 0.01
+        }
+
+        //console.log(this.time)
+        
+        
         // Update debug orbit controls
-        this.modes.debug.orbitControls.update()
+        //this.modes.debug.orbitControls.update()
 
         // Apply coordinates
         this.instance.position.copy(this.modes[this.mode].instance.position)
         this.instance.quaternion.copy(this.modes[this.mode].instance.quaternion)
         this.instance.updateMatrixWorld() // To be used in projection
+
+
     }
 
     destroy()
