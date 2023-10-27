@@ -17,7 +17,7 @@ export default class World
         this.resources = this.experience.resources
         this.time = new Time()
         this.mousePos = new THREE.Vector2();
-        this.gui = new GUI();
+        //this.gui = new GUI();
        
 
    
@@ -123,6 +123,55 @@ export default class World
         //console.log(this.scene)
         const camera = this.scene.children[0]
         this.genTerrain = new GenerativeTerrain(camera, this.gui, this.resources);
+
+        let isMuted = true
+
+        const windAudio = new Audio('./assets/windSound.mp3')
+        const ambientAudio = new Audio('./assets/ambientSound.mp3')
+        ambientAudio.muted = isMuted
+        ambientAudio.volume = 0.5
+        windAudio.muted = isMuted
+        windAudio.volume = 0.1
+
+       var hasAnimationStarted = false
+       var hasUserClicked = false
+
+       setTimeout(()=>{
+        hasAnimationStarted = true
+        if(hasUserClicked){
+            ambientAudio.play()
+        }
+        windAudio.volume = 0.05
+       },3000)
+
+        window.addEventListener('click',(e)=>{
+            const muteButton = document.getElementById('soundMuteButton')
+            if(e.target === muteButton){
+                hasUserClicked = true
+                windAudio.play()
+                if(hasAnimationStarted){
+                    ambientAudio.play()
+                }
+                
+                
+                ambientAudio.muted = !isMuted
+                windAudio.muted = !isMuted
+
+                
+                if(!isMuted){
+                    document.getElementById('muteIcon').style.display = 'block'
+                    document.getElementById('soundOnIcon').style.display = 'none'
+                    muteButton.style.backgroundColor = '#777777'
+                }else{
+                    document.getElementById('soundOnIcon').style.display = 'block'
+                    document.getElementById('muteIcon').style.display = 'none'
+                    muteButton.style.backgroundColor = '#DAFFED'
+                }
+                isMuted = !isMuted
+                
+            }
+            
+        })
     
         this.scene.add(this.genTerrain.scene)
         //console.log(this.scene)

@@ -619,9 +619,11 @@ export default class GenerativeTerrain {
         const directionalLight = new THREE.DirectionalLight( 0xffffff, 1 );
         directionalLight.position.set(3, 5, 5)
         directionalLight.lookAt(0, 0, 0)
-        this.scene.add( directionalLight, ambient );
+        this.scene.add(directionalLight, ambient );
+
+    
         
-        this.guiSetup()
+        //this.guiSetup()
         this.computeCellStates()
 
         this.setClearColorCube()
@@ -640,7 +642,7 @@ export default class GenerativeTerrain {
             fragmentShader: animatedToonFrag, 
             uniforms: {
                 uColor:{
-                    value: new THREE.Color('#3b82f6')
+                    value: new THREE.Color(this.colors[0])
                 },
                 uSpeed : {value : 0}, 
    
@@ -673,6 +675,8 @@ export default class GenerativeTerrain {
     }
 
     update(time) {
+
+        
 
         
         if(time > this.animDuration + this.delayMax) {
