@@ -41,7 +41,7 @@ export default class GenerativeTerrain {
         this.camera = camera
         
         this.animationIsDone = false
-        this.statAnimationDelay = 5;
+        this.statAnimationDelay = 7;
         this.animationTime = 0;
         
         this.guiParams = {
