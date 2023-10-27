@@ -16,6 +16,9 @@ import animatedToonVert from './shaders/animatedToon.vert?raw'
 import clearColorVert from './shaders/clearColor.vert?raw'
 import clearColorFrag from './shaders/clearColor.frag?raw'
 
+import rooFrag from './shaders/root.frag?raw'
+import rootVert from './shaders/root.vert?raw'
+
 
 export default class GenerativeTerrain {
     constructor(camera, gui, resources) {
@@ -381,17 +384,17 @@ export default class GenerativeTerrain {
             obj.updateMatrix()
             this.mesh.setMatrixAt(i, obj.matrix)
 
-            if(tempMap[i].state === "building") {
-                const positions = tempMap[i].position
+           //if(tempMap[i].state === "building") {
+           //    const positions = tempMap[i].position
 
-                // get info from map
-                const height = Math.random()*this.heightMax
-                obj.position.set(positions.x, height/2, positions.z)
+           //    // get info from map
+           //    const height = Math.random()*this.heightMax
+           //    obj.position.set(positions.x, height/2, positions.z)
 
-                const scaleX = getRandomFloat(0.1, 2)
-                const scaleZ = getRandomFloat(0.1, 2)
-                obj.scale.set(scaleX, height, scaleZ)
-            } 
+           //    const scaleX = getRandomFloat(0.1, 2)
+           //    const scaleZ = getRandomFloat(0.1, 2)
+           //    obj.scale.set(scaleX, height, scaleZ)
+           //} 
 
             obj.updateMatrix()
             this.mesh.setMatrixAt(i, obj.matrix)
@@ -610,6 +613,8 @@ export default class GenerativeTerrain {
                 const targetPos = height;
                 const targetPosAttribute = new Float32Array(rootGeo.attributes.position.count);
                 const growDirectionAttribute = new Float32Array(rootGeo.attributes.position.count)		
+               
+
                 for ( let i = 0; i < delayAttribute.length; i ++ ) {
                     delayAttribute[ i ] = delay;
                     targetPosAttribute[i] = targetPos;
@@ -620,7 +625,10 @@ export default class GenerativeTerrain {
                 rootGeo.setAttribute( 'delay', new THREE.BufferAttribute( delayAttribute, 1 ) );
                 rootGeo.setAttribute( 'targetPos', new THREE.BufferAttribute( targetPosAttribute, 1 ) );
                 rootGeo.setAttribute( 'growDirection', new THREE.BufferAttribute( growDirectionAttribute, 1 ) );
-                const mesh = new THREE.Mesh(rootGeo,this.tigeMat)
+                
+                const mesh = new THREE.Mesh(rootGeo,this.rootMat)
+
+                
                 mesh.position.y -= height
 
                 this.scene.add(mesh)
@@ -651,7 +659,7 @@ export default class GenerativeTerrain {
             fragmentShader: animatedToonFrag, 
             uniforms: {
                 uColor:{
-                    value: new THREE.Color('#3b82f6')
+                    value: new THREE.Color(this.colors[0])
                 },
                 uSpeed : {value : 0}, 
                 uAnimationDuration : {value: this.animDuration},
@@ -659,6 +667,23 @@ export default class GenerativeTerrain {
                     value:0
                 },
                 // uAnimationTime 
+                ...THREE.UniformsLib.lights,
+            
+            }, 
+            lights: true,
+            side:THREE.DoubleSide
+        })
+
+        this.rootMat = new THREE.ShaderMaterial({
+            vertexShader : rootVert, 
+            fragmentShader: rooFrag, 
+            uniforms: {
+                uColor:{
+                    value: new THREE.Color(this.colors[0])
+                },
+                uWindForce:{
+                    value:0
+                },
                 ...THREE.UniformsLib.lights,
             
             }, 
@@ -697,6 +722,10 @@ export default class GenerativeTerrain {
             
             this.tigeMat.uniforms.uSpeed.value = time // calc speed based on time
            
+        }
+
+        if(this.rootMat){
+            this.rootMat.uniforms.uWindForce.value = time
         }
 
         // if(this.rootMat.userData.shader) {
