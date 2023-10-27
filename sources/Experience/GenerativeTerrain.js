@@ -628,7 +628,7 @@ export default class GenerativeTerrain {
             fragmentShader: animatedToonFrag, 
             uniforms: {
                 uColor:{
-                    value: new THREE.Color('#3b82f6')
+                    value: new THREE.Color(this.colors[0])
                 },
                 uSpeed : {value : 0}, 
    

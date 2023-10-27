@@ -1,14 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Three.js - Template - Complex</title>
-        <link rel="stylesheet" href="./style.css">
-    </head>
-    <body>
-        <div class="experience"></div>
 
-        <script type="module" src="./index.js"></script>
-    </body>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Three.js - Template - Complex</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+    <div class="experience"></div>
+    <div class="soundMute" id="soundMuteButton"
+        style="width: 80px; height: 80px; border-radius: 50%; background-color: #777777; position: fixed; top: 40px; right: 40px; display: flex; justify-content: center; align-items: center; ">
+        <img id="muteIcon" src="/assets/mute.png" style="width: 50%; height: 50%; pointer-events: none; display: block;"
+            alt="muteIcon" srcset="">
+        <img id="soundOnIcon" src="/assets/audio.png"
+            style="width: 50%; height: 50%; pointer-events: none; display: none;" alt="muteIcon" srcset="">
+    </div>
+
+    <script type="module" src="./index.js"></script>
+</body>
+
 </html>
