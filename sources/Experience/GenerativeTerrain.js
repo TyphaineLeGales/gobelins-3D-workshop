@@ -289,13 +289,9 @@ export default class GenerativeTerrain {
         
     }
 
-    patchBuildingMaterial() {
-       
-        this.buildingMat.onBeforeCompile = function(shader) {
-            // shader.uniforms.uPointTex = {value : tex}
-
+    patchTopBuildingMaterial() {
+        this.topBuildingMat.onBeforeCompile = function(shader) {
             shader.vertexShader = shader.vertexShader.replace('void main() {', [
-                // 'uniform sampler2D uPointTex;', 
                 'varying vec2 vUv;',
                 'varying float vPosition;',
                 'void main() {',
@@ -304,7 +300,6 @@ export default class GenerativeTerrain {
                 ].join('\n'));
 
             shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
-            // 'uniform sampler2D uPointTex;', 
             'varying vec2 vUv;',
             'varying float vPosition;',
             'void main() {',
@@ -313,19 +308,38 @@ export default class GenerativeTerrain {
             shader.fragmentShader = shader.fragmentShader.replace(
                 '#include <output_fragment>',
                 [
-                    // 'vec4 col = texture2D(uPointTex, uv);',
-                    // 'outgoingLight.r = mix(outgoingLight.r, col.r, 0.8);',
-                    // 'outgoingLight.b = mix(outgoingLight.b, col.b, 0.3);',
-                    // 'outgoingLight.g = 0.1;',
-                    // 'outgoingLight.r = 0.1;',
-                    // 'outgoingLight.rgb = mix(outgoingLight.rgb, col.rgb, vec3(0.5))',
-                     'outgoingLight = vec3(vPosition+0.5);',
-                    //'outgoingLight.rgb = mix(outgoingLight.rgb, col.rgb, vec3(0.5))',
-
-
+                    'outgoingLight = vec3(vPosition+0.3);',
+                    'outgoingLight = vec3(1.0 - outgoingLight)  ;',
                     '#include <output_fragment>', 
-                    //'gl_FragColor = vec4(1.0,1.0,1.0);',
+                ].join( '\n' )
+            );
+            this.userData.shader = shader;
+        }
+    }
 
+
+
+    patchBottomBuildingMaterial() {
+        this.bottomBuildingMat.onBeforeCompile = function(shader) {
+            shader.vertexShader = shader.vertexShader.replace('void main() {', [
+                'varying vec2 vUv;',
+                'varying float vPosition;',
+                'void main() {',
+                'vPosition = position.y;',
+                'vUv = uv;'
+                ].join('\n'));
+
+            shader.fragmentShader = shader.fragmentShader.replace('void main() {', [
+            'varying vec2 vUv;',
+            'varying float vPosition;',
+            'void main() {',
+            ].join('\n'));
+
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <output_fragment>',
+                [
+                    'outgoingLight = vec3(vPosition+0.7);',
+                    '#include <output_fragment>', 
                 ].join( '\n' )
             );
             this.userData.shader = shader;
@@ -337,13 +351,17 @@ export default class GenerativeTerrain {
     drawInstancedMesh (count, heightMax) {
         const obj = new THREE.Object3D()
         const box = new THREE.BoxGeometry()
-        this.buildingMat = new THREE.MeshMatcapMaterial()
-        this.buildingMat.matcap = this.matcap
-        this.patchBuildingMaterial()
+        this.bottomBuildingMat = new THREE.MeshMatcapMaterial()
+        this.bottomBuildingMat.matcap = this.matcap
+        this.topBuildingMat = new THREE.MeshMatcapMaterial()
+        this.topBuildingMat.matcap = this.matcap
+        this.patchTopBuildingMaterial()
+        this.patchBottomBuildingMaterial()
+        
 
         let tempMap = [...this.map]
 
-        this.topMesh = new THREE.InstancedMesh(box,new THREE.MeshStandardMaterial({color:0xffffff}),count)
+        this.topMesh = new THREE.InstancedMesh(box,this.topBuildingMat,count)
         this.topMesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage )
 
         for(let i = 0; i < this.map.length; i++){
@@ -368,7 +386,8 @@ export default class GenerativeTerrain {
         this.scene.add(this.topMesh)
 
 
-        this.mesh = new THREE.InstancedMesh(box, this.buildingMat, count*2)
+        // bottom
+        this.mesh = new THREE.InstancedMesh(box, this.bottomBuildingMat, count*2)
         this.mesh.instanceMatrix.setUsage( THREE.DynamicDrawUsage ) // will be updated every frame
         for(let i = 0; i < this.map.length; i++){
 
@@ -638,10 +657,10 @@ export default class GenerativeTerrain {
         this.setClearColorCube()
 
         // set base cube 
-        let baseCube = new THREE.Mesh(new THREE.BoxGeometry(this.mapSize+1, 2, this.mapSize+1), this.buildingMat)
-        baseCube.position.x += this.mapSize/2
-        baseCube.position.z += this.mapSize/2
-        this.scene.add(baseCube)
+        // let baseCube = new THREE.Mesh(new THREE.BoxGeometry(this.mapSize+1, 0.5, this.mapSize+1), new THREE.MeshStandardMaterial({color:new THREE.Color('#CACBCD')}))
+        // baseCube.position.x += this.mapSize/2
+        // baseCube.position.z += this.mapSize/2
+        // this.scene.add(baseCube)
 
 
         this.colors = this.generateColorPalette()
