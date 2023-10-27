@@ -643,10 +643,8 @@ export default class GenerativeTerrain {
                     value: new THREE.Color('#3b82f6')
                 },
                 uSpeed : {value : 0}, 
+   
                 uAnimationDuration : {value: this.animDuration},
-                uWindForce:{
-                    value:0
-                },
                 // uAnimationTime 
                 ...THREE.UniformsLib.lights,
             
@@ -690,13 +688,9 @@ export default class GenerativeTerrain {
                         const toAnimate =  flower.children[1]
                         if(this.animationTime < toAnimate.userData.animationOffset + this.animDuration )this.animateFlower(toAnimate,  this.animationTime)
                     });
-                if(this.tigeMat) {
-                    this.tigeMat.uniforms.uSpeed.value = this.animationTime // calc speed based on time
-                
-                }
             }
-
-    
+            
+            
             this.scene.traverse(o=>{
                 if(o.isMesh){
                     if(o.name === 'leaf'){
@@ -708,6 +702,10 @@ export default class GenerativeTerrain {
                     o.rotation.y += 0.01
                 }
             })
+        }
+        if(this.tigeMat) {
+            this.tigeMat.uniforms.uSpeed.value = this.animationTime // calc speed based on time
+        
         }
 
         

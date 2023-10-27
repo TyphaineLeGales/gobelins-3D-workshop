@@ -11,11 +11,16 @@ attribute float targetPos;
 attribute float delay;
 attribute float growDirection;
 
-uniform float uWindForce;
+uniform float uSpeed;
+
+float clampedSine(float t, float m){
+    return (sin(t) + 1.0) * .5 * m;
+}
 
 void main() {
   vec3 pos = position;
   pos.xyz -= normal * uv.x * 0.2 *growDirection;
+  pos.x += clampedSine(uSpeed+delay,1.0) * (((-1.0* growDirection+1.0)*0.5+uv.x*growDirection)) * delay ;
 
   vec4 modelPosition = modelMatrix * vec4(pos, 1.0);
   vec4 viewPosition = viewMatrix * modelPosition;
@@ -30,7 +35,7 @@ void main() {
   vNormal = normalize(normalMatrix * normal);
   vViewDir = normalize(-viewPosition.xyz);
   vNormal2 = normal;
-  //clipPosition.x += uWindForce * smoothstep(0.2,1.0,uv.x);
+
 
   
   gl_Position = clipPosition;

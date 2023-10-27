@@ -30,4 +30,5 @@ void main() {
   float currTime = mapRange((uSpeed-vAnimOffset), 0.0, uAnimationDuration, 0.0,abs(vTargetPos));
   if ( abs(vPosition.y*vGrowDir) > currTime ) discard;
   gl_FragColor = vec4(uColor * (directionalLight + ambientLightColor) * rimDot , 1.0);
+  //clampedSine(uWindForce+delay,1.0) * (1.0-uv.x) * delay ;
 }
