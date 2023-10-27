@@ -12,6 +12,9 @@ const mapRange = (value, low1, high1, low2, high2)=> low2 + (high2 - low2) * (va
 
 const easeOutQuart = (x) =>  1 - Math.pow(1 - x, 4);
 
+const clampedSine = (t, m) =>  (Math.sin(t) + 1.0) * .5 * m;
+
+
 const HSLToHex = (h,s,l) => {
     s /= 100;
     l /= 100;
@@ -52,4 +55,4 @@ const HSLToHex = (h,s,l) => {
     return "#" + r + g + b;
   }
 
-export   { getRandomInt, getRandomFloat, clamp, mapRange, easeOutQuart, HSLToHex }
+export   { getRandomInt, getRandomFloat, clamp, mapRange, easeOutQuart, HSLToHex, clampedSine }

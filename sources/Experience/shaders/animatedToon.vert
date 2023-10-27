@@ -20,7 +20,8 @@ float clampedSine(float t, float m){
 void main() {
   vec3 pos = position;
   pos.xyz -= normal * uv.x * 0.2 *growDirection;
-  pos.x += clampedSine(uSpeed+delay,1.0) * (uv.x) * delay ;
+  if(growDirection < 0.0)  pos.x += clampedSine(uSpeed+delay,1.0) *uv.x * delay ;
+  // pos.x += clampedSine(uSpeed+delay,1.0) *uv.x * delay ; wind anim
 
   vec4 modelPosition = modelMatrix * vec4(pos, 1.0);
   vec4 viewPosition = viewMatrix * modelPosition;

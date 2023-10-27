@@ -5,7 +5,8 @@ import {
     clamp, 
     mapRange, 
     easeOutQuart, 
-    HSLToHex
+    HSLToHex, 
+    clampedSine
 } from './Utils/Math.js'
 import Alea from 'alea'
 import toonFragment from './shaders/toon.frag?raw' 
@@ -32,7 +33,7 @@ export default class GenerativeTerrain {
         this.buildingDensity = 0.5;
         this.flowerDensity = 0.15;
         this.emptyDensity = 0.8;
-        this.animDuration = 3;
+        this.animDuration = 5;
         this.flowerMeshPositions = []
         this.flowerAmplitude = 1.5
         this.flowerMaterials = {}
@@ -40,7 +41,7 @@ export default class GenerativeTerrain {
         this.camera = camera
         
         this.animationIsDone = false
-        this.statAnimationDelay = 3;
+        this.statAnimationDelay = 1;
         this.animationTime = 0;
         
         this.guiParams = {
@@ -505,6 +506,7 @@ export default class GenerativeTerrain {
         const leafModel = this.resources.items.leaf.scene.children[0].children[0].children[0].children[0]
         
         const tigeMesh = new THREE.Mesh(tigeGeometry,this.tigeMat)
+       
         flowerGroup.add(tigeMesh)
 
         if(flowerType === 1){
@@ -600,6 +602,7 @@ export default class GenerativeTerrain {
                 rootGeo.setAttribute( 'targetPos', new THREE.BufferAttribute( targetPosAttribute, 1 ) );
                 rootGeo.setAttribute( 'growDirection', new THREE.BufferAttribute( growDirectionAttribute, 1 ) );
                 const mesh = new THREE.Mesh(rootGeo,this.tigeMat)
+                mesh.userData.delay = delay
                 this.scene.add(mesh)
             }
         }
@@ -647,15 +650,26 @@ export default class GenerativeTerrain {
         this.initFlowerMaterials()
         this.createFlowers()
         this.drawRoots()
-        // this.patchRootMat()
     }
 
     animateFlower (flowerPart,time) {
         flowerPart.position.y = mapRange(time -flowerPart.userData.animationOffset, 0, this.animDuration, 0, flowerPart.userData.targetPosY)
         const currScale = clamp(mapRange(time - flowerPart.userData.animationOffset, 0, this.animDuration, 0, flowerPart.userData.targetScale), 0, flowerPart.userData.targetScale)
         flowerPart.scale.set(currScale, currScale, currScale)
-        // animate flower to follow tige
+
     }
+
+    // followTige (flowerPart, time) {    
+    //     const flowerTop =  flowerPart.children.filter(e => e.name !=='leaf')[0]
+    //     flowerTop.children.forEach(e => {
+
+    //         e.position.x += clampedSine(time + flowerPart.userData.animationOffset, 0.01);
+    //         // console.log(clampedSine(time + flowerPart.userData.animationOffset, 0.01));
+    //         // e.position.x += clampedSine(time + flowerPart.userData.animationOffset, 1.0) * flowerPart.userData.animationOffset 
+    //     })
+
+
+    // }
 
     update(time) {
         if(time > this.animDuration + this.delayMax) {
@@ -666,10 +680,10 @@ export default class GenerativeTerrain {
                
             this.animationTime = time - this.statAnimationDelay
             if(this.flowersInScene.length > 0 && !this.animationIsDone ) {
-                this.flowersInScene.forEach(flower => {
-                const toAnimate =  flower.children[1]
-                    if(this.animationTime < toAnimate.userData.animationOffset + this.animDuration )this.animateFlower(toAnimate,  this.animationTime)
-                });
+                this.flowersInScene.forEach((flower) => {
+                    const toAnimate =  flower.children[1]
+                        if(this.animationTime < toAnimate.userData.animationOffset + this.animDuration )this.animateFlower(toAnimate,  this.animationTime)
+                    });
             }
             
             this.scene.traverse(o=>{
@@ -685,7 +699,13 @@ export default class GenerativeTerrain {
             })
         }
         if(this.tigeMat) {
-            this.tigeMat.uniforms.uSpeed.value = this.animationTime // calc speed based on time
+            this.tigeMat.uniforms.uSpeed.value = time // calc speed based on time
+            // this.flowersInScene.forEach((flower) => {
+               
+            //     const toAnimate =  flower.children[1]
+            //         this.followTige(toAnimate,  time)
+            //     });
+            //flowers follow tige
         }
 
         
