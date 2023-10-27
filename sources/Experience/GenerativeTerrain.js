@@ -30,9 +30,9 @@ export default class GenerativeTerrain {
         this.planeOffset = 7
         this.positionRange = 5.0
         this.shouldSetToVisible = true;
-        this.buildingDensity = 0.5;
-        this.flowerDensity = 0.15;
-        this.emptyDensity = 0.8;
+        this.buildingDensity = 0.1;
+        this.flowerDensity = 0.2;
+        this.emptyDensity = 0.7;
         this.animDuration = 5;
         this.flowerMeshPositions = []
         this.flowerAmplitude = 1.5
@@ -41,7 +41,7 @@ export default class GenerativeTerrain {
         this.camera = camera
         
         this.animationIsDone = false
-        this.statAnimationDelay = 1;
+        this.statAnimationDelay = 5;
         this.animationTime = 0;
         
         this.guiParams = {
@@ -699,7 +699,7 @@ export default class GenerativeTerrain {
             })
         }
         if(this.tigeMat) {
-            this.tigeMat.uniforms.uSpeed.value = time // calc speed based on time
+            this.tigeMat.uniforms.uSpeed.value = this.animationTime // calc speed based on time
             // this.flowersInScene.forEach((flower) => {
                
             //     const toAnimate =  flower.children[1]
