@@ -52,9 +52,9 @@ export default class GenerativeTerrain {
             positionRange : 5.0, 
             planeOffset : this.planeOffset,
             flowerHeightMax : this.flowerHeightMax,
-            buildingDensity: 0.25, 
+            buildingDensity: 0.2, 
             flowerDensity : 0.25, 
-            emptyDensity : 0.5
+            emptyDensity : 0.55
         }
         this.flowersInScene = []
         this.weightedStates = []
@@ -672,7 +672,7 @@ export default class GenerativeTerrain {
     // }
 
     update(time) {
-        if(time > this.animDuration + this.delayMax) {
+        if(time > this.statAnimationDelay + this.animDuration + this.delayMax) {
             this.animationIsDone = true
         }
         
