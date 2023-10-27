@@ -585,11 +585,9 @@ export default class GenerativeTerrain {
              
                 const rootGeo = new THREE.TubeGeometry(rootCurve,12,radius,24)
 
-                
                 // set attributes
                 const delay = getRandomFloat(0, this.delayMax)
                 const delayAttribute = new Float32Array( rootGeo.attributes.position.count );
-                
                 const targetPos = height;
                 const targetPosAttribute = new Float32Array(rootGeo.attributes.position.count);
                 const growDirectionAttribute = new Float32Array(rootGeo.attributes.position.count)		
@@ -598,14 +596,10 @@ export default class GenerativeTerrain {
                     targetPosAttribute[i] = targetPos;
                     growDirectionAttribute[i] = -1;
                 }
-                
                 rootGeo.setAttribute( 'delay', new THREE.BufferAttribute( delayAttribute, 1 ) );
                 rootGeo.setAttribute( 'targetPos', new THREE.BufferAttribute( targetPosAttribute, 1 ) );
                 rootGeo.setAttribute( 'growDirection', new THREE.BufferAttribute( growDirectionAttribute, 1 ) );
                 const mesh = new THREE.Mesh(rootGeo,this.tigeMat)
-                
-                // mesh.position.y -= height
-
                 this.scene.add(mesh)
             }
         }
@@ -623,16 +617,7 @@ export default class GenerativeTerrain {
         
         this.guiSetup()
         this.computeCellStates()
-
         this.setClearColorCube()
-
-        // set base cube 
-        // let baseCube = new THREE.Mesh(new THREE.BoxGeometry(this.mapSize+1, 0.5, this.mapSize+1), new THREE.MeshStandardMaterial({color:new THREE.Color('#CACBCD')}))
-        // baseCube.position.x += this.mapSize/2
-        // baseCube.position.z += this.mapSize/2
-        // this.scene.add(baseCube)
-
-
         this.colors = this.generateColorPalette()
 
         this.tigeMat = new THREE.ShaderMaterial({
@@ -667,29 +652,25 @@ export default class GenerativeTerrain {
 
     animateFlower (flowerPart,time) {
         flowerPart.position.y = mapRange(time -flowerPart.userData.animationOffset, 0, this.animDuration, 0, flowerPart.userData.targetPosY)
-      
         const currScale = clamp(mapRange(time - flowerPart.userData.animationOffset, 0, this.animDuration, 0, flowerPart.userData.targetScale), 0, flowerPart.userData.targetScale)
         flowerPart.scale.set(currScale, currScale, currScale)
+        // animate flower to follow tige
     }
 
     update(time) {
-
-        
         if(time > this.animDuration + this.delayMax) {
             this.animationIsDone = true
         }
         
         if(time > this.statAnimationDelay ) {
                
-                this.animationTime = time - this.statAnimationDelay
-                
-                if(this.flowersInScene.length > 0 && !this.animationIsDone ) {
-                    this.flowersInScene.forEach(flower => {
-                        const toAnimate =  flower.children[1]
-                        if(this.animationTime < toAnimate.userData.animationOffset + this.animDuration )this.animateFlower(toAnimate,  this.animationTime)
-                    });
+            this.animationTime = time - this.statAnimationDelay
+            if(this.flowersInScene.length > 0 && !this.animationIsDone ) {
+                this.flowersInScene.forEach(flower => {
+                const toAnimate =  flower.children[1]
+                    if(this.animationTime < toAnimate.userData.animationOffset + this.animDuration )this.animateFlower(toAnimate,  this.animationTime)
+                });
             }
-            
             
             this.scene.traverse(o=>{
                 if(o.isMesh){
@@ -705,7 +686,6 @@ export default class GenerativeTerrain {
         }
         if(this.tigeMat) {
             this.tigeMat.uniforms.uSpeed.value = this.animationTime // calc speed based on time
-        
         }
 
         
