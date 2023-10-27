@@ -33,7 +33,7 @@ export default class GenerativeTerrain {
         this.buildingDensity = 0.1;
         this.flowerDensity = 0.2;
         this.emptyDensity = 0.7;
-        this.animDuration = 5;
+        this.animDuration = 3;
         this.flowerMeshPositions = []
         this.flowerAmplitude = 1.5
         this.flowerMaterials = {}
@@ -41,7 +41,7 @@ export default class GenerativeTerrain {
         this.camera = camera
         
         this.animationIsDone = false
-        this.statAnimationDelay = 7;
+        this.statAnimationDelay = 2;
         this.animationTime = 0;
         
         this.guiParams = {
@@ -613,7 +613,7 @@ export default class GenerativeTerrain {
     init () {
         const ambient = new THREE.AmbientLight(0xffffff, 0.4)
         const directionalLight = new THREE.DirectionalLight( 0xffffff, 1 );
-        directionalLight.position.set(3, 5, 5)
+        directionalLight.position.set(5, 7, -7)
         directionalLight.lookAt(0, 0, 0)
         this.scene.add( directionalLight, ambient );
         

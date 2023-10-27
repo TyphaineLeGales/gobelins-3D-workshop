@@ -141,7 +141,7 @@ export default class World
             ambientAudio.play()
         }
         windAudio.volume = 0.05
-       },8000)
+       },4000)
 
         window.addEventListener('click',(e)=>{
             const muteButton = document.getElementById('soundMuteButton')

@@ -91,7 +91,7 @@ export default class Camera
     update()
     {
         if(this.cameraPositionValue<Math.PI*1.49 && !this.hasCameraPassedFirstRotaion){
-            this.cameraPositionValue += 0.01
+            this.cameraPositionValue += 0.005
             this.modes.debug.instance.position.set(Math.sin(this.cameraPositionValue)*this.cameraPositionZoomValue+32, 20, Math.cos(this.cameraPositionValue)*this.cameraPositionZoomValue+32)
             this.modes.debug.instance.lookAt(32,0,32)
         }else{
@@ -99,7 +99,7 @@ export default class Camera
         }
 
         if(this.cameraPositionZoomValue > 5 && !this.hasCameraPassedSecond && this.hasCameraPassedFirstRotaion){
-            this.cameraPositionZoomValue -= 0.5
+            this.cameraPositionZoomValue -= 0.2
             //console.log(this.cameraPositionZoomValue)
             this.modes.debug.instance.position.set(Math.sin(this.cameraPositionValue)*this.cameraPositionZoomValue+32, 20, Math.cos(this.cameraPositionValue)*this.cameraPositionZoomValue+32)
             //this.modes.debug.instance.lookAt(32,0,32)
@@ -112,14 +112,14 @@ export default class Camera
         }
 
         if(this.hasCameraPassedSecond && this.cameraPositionZoomValue< 80){
-            this.cameraPositionZoomValue += 0.3
+            this.cameraPositionZoomValue += 0.1
             //console.log(this.cameraPositionZoomValue)
             this.modes.debug.instance.position.set(Math.sin(this.cameraPositionValue)*this.cameraPositionZoomValue+32, 20, Math.cos(this.cameraPositionValue)*this.cameraPositionZoomValue+32)
             this.modes.debug.instance.lookAt(32,(this.cameraPositionZoomValue-5)/4.33,32)
         }
 
         if(this.hasCameraPassedSecond && this.cameraPositionValue < Math.PI * 3){
-            this.cameraPositionValue += 0.01
+            this.cameraPositionValue += 0.02
         }
 
         //console.log(this.time)
