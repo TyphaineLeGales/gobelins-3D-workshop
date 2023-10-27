@@ -29,19 +29,19 @@ export default class GenerativeTerrain {
         this.planeOffset = 7
         this.positionRange = 5.0
         this.shouldSetToVisible = true;
-    
         this.buildingDensity = 0.5;
         this.flowerDensity = 0.15;
         this.emptyDensity = 0.8;
         this.animDuration = 3;
         this.flowerMeshPositions = []
-        this.animationIsDone = false
         this.flowerAmplitude = 1.5
         this.flowerMaterials = {}
         this.delayMax = 6
         this.camera = camera
-
-        this.statAnimationDelay = 2;
+        
+        this.animationIsDone = false
+        this.statAnimationDelay = 3;
+        this.animationTime = 0;
         
         this.guiParams = {
             width : this.width,
@@ -395,7 +395,6 @@ export default class GenerativeTerrain {
             
             const height = (((Math.abs(positions.x-this.mapSize*0.5)*-1)/(this.mapSize*0.5)+1)*this.prng()*this.heightMax*5 + ((Math.abs(positions.z-this.mapSize*0.5)*-1)/(this.mapSize*0.5)+1)*this.prng()*this.heightMax*5)*0.5
             obj.position.set(positions.x, -height/2, positions.z)
-
             const scaleX = this.prng()*2.9+0.1
             const scaleZ = this.prng()*2.9+0.1
             obj.scale.set(scaleX, height, scaleZ)
@@ -509,22 +508,6 @@ export default class GenerativeTerrain {
         flowerGroup.add(tigeMesh)
 
         if(flowerType === 1){
-            // creation des épines
-            for(let i = 0; i<splinePoints.length-1; i++){
-                // const currPoint = splinePoints[i]
-                // const epineGeometry = new THREE.ConeGeometry( tigeRadius*0.5, tigeRadius*3, 16 );
-                // epineGeometry.translate(0,tigeRadius*1.5,0)
-                // const epineMesh = new THREE.Mesh(epineGeometry,this.tigeMat) 
-                // epineMesh.position.set(currPoint.x,0 ,currPoint.z)
-                // const tigeVector = new THREE.Vector3()
-                // const tigeNormal = tigeVector.subVectors(splinePoints[i+1],currPoint).normalize()
-                // const epineArbitraryVector = new THREE.Vector3(tigeNormal.x-(this.prng()-0.5)*Math.PI*0.5, tigeNormal.y-(this.prng()-0.5)*Math.PI*0.5, tigeNormal.z-(this.prng()-0.5)*Math.PI*0.5);
-                // const epinePerpendicularVector = new THREE.Vector3().crossVectors(tigeNormal,epineArbitraryVector)
-                // const epineQuaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),epinePerpendicularVector)
-                // epineMesh.applyQuaternion(epineQuaternion)
-                // flowerGroup.add(epineMesh)
-            }
-
             // rose top
            const roseTopClone = this.resources.items.fleur_3.scene.children[0].clone()
            roseTopClone.applyQuaternion(this.getFlowerQuaternion(lastSplinePoint,beforeLastSplinePoint))
@@ -537,44 +520,33 @@ export default class GenerativeTerrain {
            let leafCenterPoints = []
            leafCenterPoints.push(splinePoints[2], splinePoints[8])
            for(let i = 0; i<leafCenterPoints.length; i++){
-            
                 animationGroup.add(this.createLeaf(leafCenterPoints[i], leafCenterPoints[i+1], tigeRadius, leafModel,flowerHeight))
             }
-            
-
         }
 
         if(flowerType === 2) {
-            
             for(let i = 0; i<splinePoints.length-1; i++){
                 animationGroup.add(this.createLeaf(splinePoints[i], splinePoints[i+1], tigeRadius, leafModel,flowerHeight))
            }
-
-           const paqueretteClone = this.resources.items.fleur_2.scene.children[0].clone()
-           paqueretteClone.applyQuaternion(this.getFlowerQuaternion(lastSplinePoint,beforeLastSplinePoint))
-           
-           paqueretteClone.children[0].material = this.flowerMaterials.paquerettePetale
-           paqueretteClone.children[1].material = this.flowerMaterials.paqueretteBouton
-           paqueretteClone.children[2].material = this.flowerMaterials.paquerettePetale
-
-        animationGroup.add(paqueretteClone)
-           
+            const paqueretteClone = this.resources.items.fleur_2.scene.children[0].clone()
+            paqueretteClone.applyQuaternion(this.getFlowerQuaternion(lastSplinePoint,beforeLastSplinePoint))
+            paqueretteClone.children[0].material = this.flowerMaterials.paquerettePetale
+            paqueretteClone.children[1].material = this.flowerMaterials.paqueretteBouton
+            paqueretteClone.children[2].material = this.flowerMaterials.paquerettePetale
+            animationGroup.add(paqueretteClone)
         }
 
         if(flowerType === 3) {
-            
-           const fleurClone = this.resources.items.fleur_1.scene.children[0].clone()
-           fleurClone.applyQuaternion(this.getFlowerQuaternion(lastSplinePoint,beforeLastSplinePoint))
-           fleurClone.children[0].material =  this.flowerMaterials.fleurPetale
-           fleurClone.children[1].material =  this.flowerMaterials.fleurBouton
-
-           fleurClone.children[2].material = this.flowerMaterials.fleurPetale
+            const fleurClone = this.resources.items.fleur_1.scene.children[0].clone()
+            fleurClone.applyQuaternion(this.getFlowerQuaternion(lastSplinePoint,beforeLastSplinePoint))
+            fleurClone.children[0].material =  this.flowerMaterials.fleurPetale
+            fleurClone.children[1].material =  this.flowerMaterials.fleurBouton
+            fleurClone.children[2].material = this.flowerMaterials.fleurPetale
             animationGroup.add(fleurClone)
-          
         }
 
         animationGroup.position.set(lastSplinePoint.x,0,lastSplinePoint.z)
-        animationGroup.scale.set(scale, scale,scale)
+        animationGroup.scale.set(0, 0, 0)
 
          // set target values for animation
         animationGroup.userData.targetPosY = lastSplinePoint.y;
@@ -591,18 +563,16 @@ export default class GenerativeTerrain {
     drawRoots () {
 
         const fAmplitude = this.prng()*this.flowerAmplitude
-        const tigeDecalageX = this.prng() - 0.5 < 0 ? -1 : 1
-        const tigeDecalageZ = this.prng() - 0.5 < 0 ? -1 : 1
-        
+        const tigeDecalage = this.prng() - 0.5 < 0 ? -1 : 1
         
         for(let i = 0; i < this.map.length; i++){
             if(this.map[i].state === "flower") {
-                const height = (this.prng()*this.heightMax*3)
+                const height = -(this.prng()*this.heightMax*3)
                 const positions = this.map[i].position
                 const posX = positions.x
                 const posZ = positions.z
                 const radius = (this.prng()*0.3)+0.1
-                const randOffset = () => this.prng() * tigeDecalageX * fAmplitude
+                const randOffset = () => this.prng() * tigeDecalage * fAmplitude
                 const rootCurve = new THREE.CatmullRomCurve3(
                     [
                         new THREE.Vector3(posX,0,posZ),
@@ -615,10 +585,11 @@ export default class GenerativeTerrain {
              
                 const rootGeo = new THREE.TubeGeometry(rootCurve,12,radius,24)
 
+                
                 // set attributes
                 const delay = getRandomFloat(0, this.delayMax)
                 const delayAttribute = new Float32Array( rootGeo.attributes.position.count );
-        
+                
                 const targetPos = height;
                 const targetPosAttribute = new Float32Array(rootGeo.attributes.position.count);
                 const growDirectionAttribute = new Float32Array(rootGeo.attributes.position.count)		
@@ -626,15 +597,14 @@ export default class GenerativeTerrain {
                     delayAttribute[ i ] = delay;
                     targetPosAttribute[i] = targetPos;
                     growDirectionAttribute[i] = -1;
-        
                 }
-        
+                
                 rootGeo.setAttribute( 'delay', new THREE.BufferAttribute( delayAttribute, 1 ) );
                 rootGeo.setAttribute( 'targetPos', new THREE.BufferAttribute( targetPosAttribute, 1 ) );
                 rootGeo.setAttribute( 'growDirection', new THREE.BufferAttribute( growDirectionAttribute, 1 ) );
                 const mesh = new THREE.Mesh(rootGeo,this.tigeMat)
-               
-                mesh.position.y -= height
+                
+                // mesh.position.y -= height
 
                 this.scene.add(mesh)
             }
@@ -706,38 +676,31 @@ export default class GenerativeTerrain {
 
     update(time) {
 
+        
         if(time > this.animDuration + this.delayMax) {
             this.animationIsDone = true
         }
-       
-
-            
-            if(time > this.statAnimationDelay ) {
+        
+        if(time > this.statAnimationDelay ) {
+               
+                this.animationTime = time - this.statAnimationDelay
                 
                 if(this.flowersInScene.length > 0 && !this.animationIsDone ) {
                     this.flowersInScene.forEach(flower => {
                         const toAnimate =  flower.children[1]
-                        if(time < toAnimate.userData.animationOffset + this.animDuration )this.animateFlower(toAnimate,  time)
+                        if(this.animationTime < toAnimate.userData.animationOffset + this.animDuration )this.animateFlower(toAnimate,  this.animationTime)
                     });
                 if(this.tigeMat) {
-        
-                    // easeOutQuart
-                    this.tigeMat.uniforms.uSpeed.value = time // calc speed based on time
+                    this.tigeMat.uniforms.uSpeed.value = this.animationTime // calc speed based on time
                 
                 }
             }
 
-            
     
             this.scene.traverse(o=>{
                 if(o.isMesh){
                     if(o.name === 'leaf'){
-                        // if(this.shouldSetToVisible) {
-                        //     o.visible = true
-                        //     this.shouldSetToVisible = false
-                        // } 
-                        
-                        o.position.y = ((time)*o.userData.vitesseMontee)%o.userData.hauteurMax
+                        o.position.y = ((this.animationTime)*o.userData.vitesseMontee)%o.userData.hauteurMax
                         o.rotation.y += o.userData.vitesseRotation * o.userData.sensRotation
                     }
                 }
@@ -746,6 +709,7 @@ export default class GenerativeTerrain {
                 }
             })
         }
+
         
     }
 
