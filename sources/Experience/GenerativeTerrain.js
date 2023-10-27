@@ -25,7 +25,7 @@ export default class GenerativeTerrain {
         this.mapSize = 64;
         this.count = this.mapSize*this.mapSize;
         this.heightMax = 10
-        this.gui = gui;
+        // this.gui = gui;
         this.matcap = resources.matcap
         this.planeOffset = 7
         this.positionRange = 5.0
@@ -618,7 +618,7 @@ export default class GenerativeTerrain {
         directionalLight.lookAt(0, 0, 0)
         this.scene.add( directionalLight, ambient );
         
-        this.guiSetup()
+        // this.guiSetup()
         this.computeCellStates()
         this.setClearColorCube()
         this.colors = this.generateColorPalette()

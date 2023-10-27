@@ -17,7 +17,7 @@ export default class World
         this.resources = this.experience.resources
         this.time = new Time()
         this.mousePos = new THREE.Vector2();
-        this.gui = new GUI();
+        // this.gui = new GUI();
        
 
    
